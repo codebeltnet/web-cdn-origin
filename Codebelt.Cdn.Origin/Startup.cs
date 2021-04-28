@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Cuemon;
 using Cuemon.Data.Integrity;
 using Cuemon.Extensions;
@@ -23,14 +24,14 @@ namespace Codebelt.Cdn.Origin
 
         public Startup(IConfiguration configuration)
         {
-            var maxAge = Convert.ToDouble(configuration["CacheControl:MaxAge:Double"] ?? "12");
-            var maxAgeUnit = (configuration["CacheControl:MaxAge:Unit"] ?? "Hours").ToEnum<TimeUnit>();
-            var sharedMaxAge = Convert.ToDouble(configuration["CacheControl:SharedMaxAge:Double"] ?? "168");
-            var sharedMaxAgeUnit = (configuration["CacheControl:SharedMaxAge:Unit"] ?? "Hours").ToEnum<TimeUnit>();
+            var maxAge = Convert.ToDouble(configuration["CACHECONTROL_MAXAGE"] ?? "12");
+            var maxAgeTimeUnit = (configuration["CACHECONTROL_MAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
+            var sharedMaxAge = Convert.ToDouble(configuration["CACHECONTROL_SHAREDMAXAGE"] ?? "168");
+            var sharedMaxAgeTimeUnit = (configuration["CACHECONTROL_SHAREDMAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
 
-            _contentPath = configuration["ContentPath"] ?? "/cdnroot";
-            _maxAge = maxAge.ToTimeSpan(maxAgeUnit);
-            _sharedMaxAge = sharedMaxAge.ToTimeSpan(sharedMaxAgeUnit);
+            _contentPath = configuration["CDNROOT"] ?? "/cdnroot";
+            _maxAge = maxAge.ToTimeSpan(maxAgeTimeUnit);
+            _sharedMaxAge = sharedMaxAge.ToTimeSpan(sharedMaxAgeTimeUnit);
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -39,7 +40,6 @@ namespace Codebelt.Cdn.Origin
             services.AddResponseCaching();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseCors(pb =>
@@ -66,9 +66,14 @@ namespace Codebelt.Cdn.Origin
                     fc.Context.Response.Headers[HeaderNames.Expires] = DateTime.UtcNow.Add(_maxAge).ToString("R");
                     if (!fc.File.IsDirectory && fc.File.Exists)
                     {
-                        var builder = new ChecksumBuilder(HashFactory.CreateCrc32).CombineWith(fc.File.CreateReadStream().ToByteArray());
+                        var builder = new ChecksumBuilder(HashFactory.CreateCrc64).CombineWith(fc.File.CreateReadStream().ToByteArray());
                         fc.Context.Response.AddOrUpdateLastModifiedHeader(fc.Context.Request, fc.File.LastModified.UtcDateTime);
                         fc.Context.Response.AddOrUpdateEntityTagHeader(fc.Context.Request, builder);
+                        if (fc.Context.Response.StatusCode == StatusCodes.Status304NotModified)
+                        {
+                            fc.Context.Response.Body = new MemoryStream();
+                            fc.Context.Response.ContentLength = 0;
+                        }
                     }
                 };
             }));
