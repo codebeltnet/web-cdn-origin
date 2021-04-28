@@ -4,6 +4,7 @@ using Cuemon;
 using Cuemon.Data.Integrity;
 using Cuemon.Extensions;
 using Cuemon.Extensions.AspNetCore.Http;
+using Cuemon.Extensions.Collections.Generic;
 using Cuemon.Extensions.IO;
 using Cuemon.Security;
 using Microsoft.AspNetCore.Builder;
@@ -21,6 +22,7 @@ namespace Codebelt.Cdn.Origin
         private readonly TimeSpan _maxAge;
         private readonly TimeSpan _sharedMaxAge;
         private readonly string _contentPath;
+        private readonly string[] _defaultFiles;
 
         public Startup(IConfiguration configuration)
         {
@@ -28,8 +30,9 @@ namespace Codebelt.Cdn.Origin
             var maxAgeTimeUnit = (configuration["CACHECONTROL_MAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
             var sharedMaxAge = Convert.ToDouble(configuration["CACHECONTROL_SHAREDMAXAGE"] ?? "168");
             var sharedMaxAgeTimeUnit = (configuration["CACHECONTROL_SHAREDMAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
-
+            
             _contentPath = configuration["CDNROOT"] ?? "/cdnroot";
+            _defaultFiles = (configuration["CDNROOT_DEFAULTFILES"] ?? "default.htm;default.html;index.htm;index.html").Split(';');
             _maxAge = maxAge.ToTimeSpan(maxAgeTimeUnit);
             _sharedMaxAge = sharedMaxAge.ToTimeSpan(sharedMaxAgeTimeUnit);
         }
@@ -48,7 +51,12 @@ namespace Codebelt.Cdn.Origin
                 pb.AllowAnyMethod();
                 pb.AllowAnyOrigin();
             });
-
+            app.UseDefaultFiles(Patterns.Configure<DefaultFilesOptions>(o =>
+            {
+                o.DefaultFileNames.Clear();
+                o.DefaultFileNames.AddRange(_defaultFiles);
+                o.FileProvider = new PhysicalFileProvider(_contentPath);
+            }));
             app.UseStaticFiles(Patterns.Configure<StaticFileOptions>(o =>
             {
                 o.ServeUnknownFileTypes = true;

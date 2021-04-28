@@ -5,7 +5,7 @@
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ContentPath": "C:\\Source\\Test\\cdncontent"
+        "CDNROOT": "C:\\Source\\Test\\cdncontent"
       },
       "dotnetRunMessages": "true",
       "applicationUrl": "http://localhost:5000"
@@ -16,7 +16,7 @@
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ContentPath": "C:\\Source\\Test\\cdncontent"
+        "CDNROOT": "C:\\Source\\Test\\cdncontent"
       },
       "publishAllPorts": true
     }
