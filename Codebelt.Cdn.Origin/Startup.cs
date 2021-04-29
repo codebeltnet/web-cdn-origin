@@ -22,6 +22,7 @@ namespace Codebelt.Cdn.Origin
         private readonly TimeSpan _sharedMaxAge;
         private readonly string _contentPath;
         private readonly string[] _defaultFiles;
+        private readonly int _bytesToReadForEntityTagHeader;
 
         public Startup(IConfiguration configuration)
         {
@@ -30,6 +31,7 @@ namespace Codebelt.Cdn.Origin
             var sharedMaxAge = Convert.ToDouble(configuration["CACHECONTROL_SHAREDMAXAGE"] ?? "168");
             var sharedMaxAgeTimeUnit = (configuration["CACHECONTROL_SHAREDMAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
 
+            _bytesToReadForEntityTagHeader = Convert.ToInt32(configuration["ETAG_BYTESTOREAD"] ?? $"{int.MaxValue}");
             _contentPath = configuration["CDNROOT"] ?? "/cdnroot";
             _defaultFiles = (configuration["CDNROOT_DEFAULTFILES"] ?? "default.htm;default.html;index.htm;index.html").Split(';');
             _maxAge = maxAge.ToTimeSpan(maxAgeTimeUnit);
@@ -73,9 +75,9 @@ namespace Codebelt.Cdn.Origin
                     fc.Context.Response.Headers[HeaderNames.Expires] = DateTime.UtcNow.Add(_maxAge).ToString("R");
                     if (!fc.File.IsDirectory && fc.File.Exists)
                     {
-                        var builder = new ChecksumBuilder(() => UnkeyedHashFactory.CreateCryptoMd5()).CombineWith(fc.File.CreateReadStream().ToByteArray());
+                        var builder = new ChecksumBuilder(() => UnkeyedHashFactory.CreateCryptoMd5()).CombineWith(fc.File.CreateReadStream().ToByteArray(_bytesToReadForEntityTagHeader));
                         fc.Context.Response.AddOrUpdateLastModifiedHeader(fc.Context.Request, fc.File.LastModified.UtcDateTime);
-                        fc.Context.Response.AddOrUpdateEntityTagHeader(fc.Context.Request, builder);
+                        fc.Context.Response.AddOrUpdateEntityTagHeader(fc.Context.Request, builder, _bytesToReadForEntityTagHeader != int.MaxValue);
                         if (fc.Context.Response.StatusCode == StatusCodes.Status304NotModified)
                         {
                             fc.Context.Response.Body = new MemoryStream();

@@ -5,6 +5,7 @@
       "launchBrowser": true,
       "environmentVariables": {
         "CDNROOT": "C:\\Source\\Test\\cdncontent",
+        "ETAG_BYTESTOREAD": "1024",
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": "true",
