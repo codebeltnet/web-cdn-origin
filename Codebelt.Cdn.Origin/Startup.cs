@@ -6,7 +6,7 @@ using Cuemon.Extensions;
 using Cuemon.Extensions.AspNetCore.Http;
 using Cuemon.Extensions.Collections.Generic;
 using Cuemon.Extensions.IO;
-using Cuemon.Security;
+using Cuemon.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -73,7 +73,7 @@ namespace Codebelt.Cdn.Origin
                     fc.Context.Response.Headers[HeaderNames.Expires] = DateTime.UtcNow.Add(_maxAge).ToString("R");
                     if (!fc.File.IsDirectory && fc.File.Exists)
                     {
-                        var builder = new ChecksumBuilder(HashFactory.CreateCrc64).CombineWith(fc.File.CreateReadStream().ToByteArray());
+                        var builder = new ChecksumBuilder(() => UnkeyedHashFactory.CreateCryptoMd5()).CombineWith(fc.File.CreateReadStream().ToByteArray());
                         fc.Context.Response.AddOrUpdateLastModifiedHeader(fc.Context.Request, fc.File.LastModified.UtcDateTime);
                         fc.Context.Response.AddOrUpdateEntityTagHeader(fc.Context.Request, builder);
                         if (fc.Context.Response.StatusCode == StatusCodes.Status304NotModified)

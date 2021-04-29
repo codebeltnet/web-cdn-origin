@@ -4,19 +4,19 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "CDNROOT": "C:\\Source\\Test\\cdncontent"
+        "CDNROOT": "C:\\Source\\Test\\cdncontent",
+        "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": "true",
-      "applicationUrl": "http://localhost:5000"
+      "applicationUrl": "http://localhost:5001"
     },
     "Docker": {
       "commandName": "Docker",
       "launchBrowser": true,
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "CDNROOT": "C:\\Source\\Test\\cdncontent"
+        "CDNROOT": "C:\\Source\\Test\\cdncontent",
+        "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "publishAllPorts": true
     }
