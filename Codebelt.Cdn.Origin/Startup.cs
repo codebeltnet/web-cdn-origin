@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Net.Http.Headers;
 
 namespace Codebelt.Cdn.Origin
@@ -30,7 +29,7 @@ namespace Codebelt.Cdn.Origin
             var maxAgeTimeUnit = (configuration["CACHECONTROL_MAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
             var sharedMaxAge = Convert.ToDouble(configuration["CACHECONTROL_SHAREDMAXAGE"] ?? "168");
             var sharedMaxAgeTimeUnit = (configuration["CACHECONTROL_SHAREDMAXAGE_TIMEUNIT"] ?? "Hours").ToEnum<TimeUnit>();
-            
+
             _contentPath = configuration["CDNROOT"] ?? "/cdnroot";
             _defaultFiles = (configuration["CDNROOT_DEFAULTFILES"] ?? "default.htm;default.html;index.htm;index.html").Split(';');
             _maxAge = maxAge.ToTimeSpan(maxAgeTimeUnit);
@@ -55,12 +54,12 @@ namespace Codebelt.Cdn.Origin
             {
                 o.DefaultFileNames.Clear();
                 o.DefaultFileNames.AddRange(_defaultFiles);
-                o.FileProvider = new PhysicalFileProvider(_contentPath);
+                o.FileProvider = new CaseInsensitivePhysicalFileProvider(_contentPath);
             }));
             app.UseStaticFiles(Patterns.Configure<StaticFileOptions>(o =>
             {
                 o.ServeUnknownFileTypes = true;
-                o.FileProvider = new PhysicalFileProvider(_contentPath);
+                o.FileProvider = new CaseInsensitivePhysicalFileProvider(_contentPath);
                 o.OnPrepareResponse = fc =>
                 {
                     fc.Context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue()
