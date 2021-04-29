@@ -12,7 +12,7 @@ namespace Codebelt.Cdn.Origin
     {
         private readonly PhysicalFileProvider _provider;
         private static ConcurrentDictionary<string, string> _paths;
-
+        
         public CaseInsensitivePhysicalFileProvider(string root, ExclusionFilters filters = ExclusionFilters.Sensitive)
         {
             _provider = new PhysicalFileProvider(root, filters);
@@ -22,23 +22,22 @@ namespace Codebelt.Cdn.Origin
         public IFileInfo GetFileInfo(string subpath)
         {
             var actualPath = GetActualFilePath(subpath);
-            if (actualPath != subpath) { return new NotFoundFileInfo(subpath); }
             return _provider.GetFileInfo(actualPath);
         }
 
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
             var actualPath = GetActualFilePath(subpath);
-            if (actualPath != subpath) { return NotFoundDirectoryContents.Singleton; }
             return _provider.GetDirectoryContents(actualPath);
         }
 
         public IChangeToken Watch(string filter) => _provider.Watch(filter);
 
+        // Determines (and caches) the actual path for a file
         private string GetActualFilePath(string path)
         {
             // Check if this has already been matched before
-            if (_paths.ContainsKey(path)) { return _paths[path]; }
+            if (_paths.ContainsKey(path)) return _paths[path];
 
             // Break apart the path and get the root folder to work from
             var currPath = _provider.Root;
