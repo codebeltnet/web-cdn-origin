@@ -34,7 +34,7 @@ Do note, that if a file is read in its entirely, a strong ETag header value is g
 ### Embed files in image
 
 ```
-FROM codebeltnet/web-cdn-origin:1.1.4
+FROM codebeltnet/web-cdn-origin:1.1.5
 
 WORKDIR /cdnroot
 ADD cdnroot .
@@ -46,7 +46,7 @@ WORKDIR /app
 
 ### Mount volume to image
 
-`docker run --name cdn-origin -d -p 8000:80 -v some-path-with-static-files:/cdnroot codebeltnet/web-cdn-origin:1.1.4`
+`docker run --name cdn-origin -d -p 8000:80 -v some-path-with-static-files:/cdnroot codebeltnet/web-cdn-origin:1.1.5`
 
 ## Kubernetes Setup
 
@@ -72,7 +72,7 @@ spec:
       restartPolicy: Always
       containers:
       - name: codebelt-net
-        image: codebeltnet/web-cdn-origin:1.1.4
+        image: codebeltnet/web-cdn-origin:1.1.5
         env:
           - name: CACHECONTROL_SHAREDMAXAGE
             value: "24"
