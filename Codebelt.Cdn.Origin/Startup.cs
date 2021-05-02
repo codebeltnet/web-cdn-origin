@@ -39,18 +39,11 @@ namespace Codebelt.Cdn.Origin
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors();
             services.AddResponseCaching();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseCors(pb =>
-            {
-                pb.AllowAnyHeader();
-                pb.AllowAnyMethod();
-                pb.AllowAnyOrigin();
-            });
             app.UseDefaultFiles(Patterns.Configure<DefaultFilesOptions>(o =>
             {
                 o.DefaultFileNames.Clear();
@@ -63,6 +56,7 @@ namespace Codebelt.Cdn.Origin
                 o.FileProvider = new CaseInsensitivePhysicalFileProvider(_contentPath);
                 o.OnPrepareResponse = fc =>
                 {
+                    fc.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
                     fc.Context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue()
                     {
                         Public = true,
