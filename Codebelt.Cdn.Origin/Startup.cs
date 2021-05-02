@@ -5,7 +5,6 @@ using Cuemon.Data.Integrity;
 using Cuemon.Extensions;
 using Cuemon.Extensions.AspNetCore.Http;
 using Cuemon.Extensions.Collections.Generic;
-using Cuemon.Extensions.IO;
 using Cuemon.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -77,7 +76,7 @@ namespace Codebelt.Cdn.Origin
                     {
                         var builder = new ChecksumBuilder(() => UnkeyedHashFactory.CreateCryptoMd5()).CombineWith(fc.File.CreateReadStream().ToByteArray(_bytesToReadForEntityTagHeader));
                         fc.Context.Response.AddOrUpdateLastModifiedHeader(fc.Context.Request, fc.File.LastModified.UtcDateTime);
-                        fc.Context.Response.AddOrUpdateEntityTagHeader(fc.Context.Request, builder, _bytesToReadForEntityTagHeader != int.MaxValue);
+                        fc.Context.Response.AddOrUpdateEntityTagHeader(fc.Context.Request, builder, fc.File.Length > _bytesToReadForEntityTagHeader);
                         if (fc.Context.Response.StatusCode == StatusCodes.Status304NotModified)
                         {
                             fc.Context.Response.Body = new MemoryStream();
