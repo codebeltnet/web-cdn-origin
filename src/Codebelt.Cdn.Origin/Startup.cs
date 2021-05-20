@@ -40,6 +40,7 @@ namespace Codebelt.Cdn.Origin
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddResponseCaching();
+            services.AddResponseCompression();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -50,6 +51,9 @@ namespace Codebelt.Cdn.Origin
                 o.DefaultFileNames.AddRange(_defaultFiles);
                 o.FileProvider = new CaseInsensitivePhysicalFileProvider(_contentPath);
             }));
+
+            app.UseResponseCompression();
+
             app.UseStaticFiles(Patterns.Configure<StaticFileOptions>(o =>
             {
                 o.ServeUnknownFileTypes = true;
