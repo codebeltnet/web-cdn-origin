@@ -6,9 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cuemon.Core.App" Version="6.3.0" />
-    <PackageReference Include="Cuemon.Extensions.AspNetCore" Version="6.3.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.14.0" />
+    <PackageReference Include="Cuemon.Core.App" Version="7.0.0" />
+    <PackageReference Include="Cuemon.Extensions.AspNetCore" Version="7.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
   </ItemGroup>
 
 </Project>

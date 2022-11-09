@@ -45,7 +45,7 @@ namespace Codebelt.Cdn.Origin
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseDefaultFiles(Patterns.Configure<DefaultFilesOptions>(o =>
+            app.UseDefaultFiles(Patterns.CreateInstance<DefaultFilesOptions>(o =>
             {
                 o.DefaultFileNames.Clear();
                 o.DefaultFileNames.AddRange(_defaultFiles);
@@ -54,7 +54,7 @@ namespace Codebelt.Cdn.Origin
 
             app.UseResponseCompression();
 
-            app.UseStaticFiles(Patterns.Configure<StaticFileOptions>(o =>
+            app.UseStaticFiles(Patterns.CreateInstance<StaticFileOptions>(o =>
             {
                 o.ServeUnknownFileTypes = true;
                 o.FileProvider = new CaseInsensitivePhysicalFileProvider(_contentPath);
