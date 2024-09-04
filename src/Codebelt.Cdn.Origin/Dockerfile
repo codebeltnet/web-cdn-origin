@@ -1,6 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 EXPOSE 80
 
+ENV ASPNETCORE_HTTP_PORTS 80
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 
