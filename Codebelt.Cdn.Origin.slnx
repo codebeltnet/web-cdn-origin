@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Codebelt.Cdn.Origin/Codebelt.Cdn.Origin.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Codebelt.Cdn.Origin.Tests/Codebelt.Cdn.Origin.Tests.csproj" />
+    <Project Path="test/Codebelt.Cdn.Origin.FunctionalTests/Codebelt.Cdn.Origin.FunctionalTests.csproj" />
+  </Folder>
+</Solution>
