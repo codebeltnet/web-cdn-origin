@@ -1,25 +1,15 @@
 {
+  "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "Codebelt.Cdn.Origin": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5001",
       "environmentVariables": {
-        "CDNROOT": "C:\\Source\\Test\\cdncontent",
-        "ETAG_BYTESTOREAD": "1024",
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "dotnetRunMessages": "true",
-      "applicationUrl": "http://localhost:5001"
-    },
-    "Docker": {
-      "commandName": "Docker",
-      "launchBrowser": true,
-      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
-      "environmentVariables": {
-        "CDNROOT": "C:\\Source\\Test\\cdncontent",
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "publishAllPorts": true
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "CdnOrigin__ContentRoot": "C:\\Source\\Test\\cdncontent"
+      }
     }
   }
 }
