@@ -130,27 +130,6 @@ public class StaticContentTest : Test
         Assert.DoesNotContain("CdnOrigin", await response.Content.ReadAsStringAsync());
     }
 
-    [Fact]
-    public async Task Get_ShouldRespectFilesystemCaseSemantics()
-    {
-        await using var application = new CdnOriginTestApplication();
-        using var client = application.CreateClient();
-
-        using var exact = await client.GetAsync("/styles/site.css");
-        using var wrongCase = await client.GetAsync("/styles/SITE.CSS");
-
-        Assert.Equal(HttpStatusCode.OK, exact.StatusCode);
-
-        if (OperatingSystem.IsLinux())
-        {
-            Assert.Equal(HttpStatusCode.NotFound, wrongCase.StatusCode);
-        }
-        else
-        {
-            Assert.Equal(HttpStatusCode.OK, wrongCase.StatusCode);
-        }
-    }
-
     [Theory]
     [InlineData("POST")]
     [InlineData("DELETE")]

@@ -34,7 +34,7 @@ public static partial class CdnOriginApplicationBuilderExtensions
             throw new InvalidOperationException($"Invalid Static Content Provider configuration. {validation.ErrorMessage}");
         }
 
-        var fileProvider = new PhysicalFileProvider(validation.ResolvedPath);
+        var fileProvider = new CaseInsensitivePhysicalFileProvider(validation.ResolvedPath);
 
         if (options.Compression.Enabled)
         {
