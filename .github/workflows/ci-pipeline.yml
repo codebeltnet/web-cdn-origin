@@ -27,10 +27,12 @@ jobs:
       fail-fast: false
       matrix:
         configuration: [Debug, Release]
+        os: [ubuntu-24.04, windows-2025, macos-26]
     uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@v3
     with:
       projects: test/**/*.csproj
       configuration: ${{ matrix.configuration }}
+      runs-on: ${{ matrix.os }}
       verbosity-level: normal
       restore: true
       build: true
