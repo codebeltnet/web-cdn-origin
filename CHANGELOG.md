@@ -27,11 +27,11 @@ This is a **major** release representing a deliberate modernization of the Stati
 - Cache durations are expressed as standard `TimeSpan` values instead of a numeric value plus a separate time-unit variable,
 - `ETag` and `Last-Modified` are now produced by the ASP.NET Core static file middleware from file identity and modification metadata. The server no longer reads or hashes file contents to build an `ETag`,
 - The default container port is `8080` (was `80`) and the process runs as a non-root user.
+- Case-insensitive path lookup is retained through a framework-only physical-file-provider decorator so asset URLs work on case-sensitive and case-insensitive file systems.
 
 ### Removed
 
 - **Custom MD5 content hashing for `ETag`** (`ETAG_BYTESTOREAD` and the `StreamExtensions` helper). The framework `ETag` replaces it and removes per-request full-file reads,
-- **Case-insensitive path emulation** (`CaseInsensitivePhysicalFileProvider`). File lookups now follow normal filesystem case semantics. This custom resolver had correctness and security concerns; rely on correct casing or a case-insensitive filesystem,
 - **`no-transform`** is no longer emitted by default, so a CDN may legitimately transform or optimize responses,
 - **`Expires`** header. `Cache-Control: max-age` is authoritative; the redundant `Expires` header is gone,
 - **Server-side response caching** (`AddResponseCaching`). A CDN origin should not cache its own responses; the CDN and HTTP clients handle caching,

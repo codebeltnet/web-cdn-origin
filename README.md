@@ -88,6 +88,7 @@ All of the following are provided by the framework static-file middleware and ar
 | Missing files | `404 Not Found` |
 | Unsupported methods | `405 Method Not Allowed` with `Allow: GET, HEAD, OPTIONS` |
 | Directory browsing | Disabled |
+| Path casing | Case-insensitive lookup across case-sensitive and case-insensitive file systems |
 | Path traversal | Prevented — access is confined to the content root |
 
 ## Cache-policy modes
@@ -302,7 +303,7 @@ Because the origin emits correct validators and cache directives, CloudFront rev
 - **`no-transform`** is no longer emitted by default.
 - **`Expires`** is removed; `Cache-Control: max-age` is authoritative.
 - **Server-side response caching** is removed — the CDN and HTTP clients handle caching.
-- **Case-insensitive path emulation** is removed; lookups follow normal filesystem case semantics.
+- **Case-insensitive path lookup** is preserved for compatibility with asset URLs on every supported file system; ambiguous case-only matches are rejected.
 - **Unknown file types are rejected by default** (previously served); add explicit MIME mappings to serve additional types.
 - **CORS is configurable** instead of always emitting `Access-Control-Allow-Origin: *`; the default remains public.
 - **The container port is `8080`** (was `80`) and the process runs as a **non-root** user.
