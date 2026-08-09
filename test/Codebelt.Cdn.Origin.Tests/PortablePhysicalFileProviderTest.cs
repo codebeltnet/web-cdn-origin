@@ -6,9 +6,9 @@ using Xunit;
 
 namespace Codebelt.Cdn.Origin;
 
-public class CaseInsensitivePhysicalFileProviderTest : Test
+public class PortablePhysicalFileProviderTest : Test
 {
-    public CaseInsensitivePhysicalFileProviderTest(ITestOutputHelper output) : base(output)
+    public PortablePhysicalFileProviderTest(ITestOutputHelper output) : base(output)
     {
     }
 
