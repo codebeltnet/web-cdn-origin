@@ -1,10 +1,20 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  <!--
+<Project Sdk="Microsoft.NET.Sdk.Web"><!--
     The Static Content Provider is intentionally framework-first: it references only the
     ASP.NET Core shared framework. Do not add third-party packages without a written
     justification (see AGENTS.md). Build configuration is centralized in the repository-root
     Directory.Build.props (target framework, nullable, analyzers, warnings-as-errors, version).
   -->
 
+
+
+  <ItemGroup>
+    <Compile Remove="CaseInsensitivePhysicalFileProvider.cs" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <PackageReference Include="Codebelt.Bootstrapper.Web" />
+    <PackageReference Include="Cuemon.Extensions.FileProviders.Physical" />
+  </ItemGroup>
 </Project>
