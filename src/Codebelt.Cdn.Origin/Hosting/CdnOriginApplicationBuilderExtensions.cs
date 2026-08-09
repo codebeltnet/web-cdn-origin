@@ -1,4 +1,5 @@
 using Codebelt.Cdn.Origin.Configuration;
+using Cuemon.Extensions.FileProviders;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -34,7 +35,7 @@ public static partial class CdnOriginApplicationBuilderExtensions
             throw new InvalidOperationException($"Invalid Static Content Provider configuration. {validation.ErrorMessage}");
         }
 
-        var fileProvider = new CaseInsensitivePhysicalFileProvider(validation.ResolvedPath);
+        var fileProvider = new PortablePhysicalFileProvider(validation.ResolvedPath);
 
         if (options.Compression.Enabled)
         {

@@ -1,3 +1,4 @@
+using Codebelt.Bootstrapper.Web;
 using Codebelt.Cdn.Origin.Hosting;
 
 namespace Codebelt.Cdn.Origin;
@@ -5,7 +6,7 @@ namespace Codebelt.Cdn.Origin;
 /// <summary>
 /// The entry point of the Static Content Provider.
 /// </summary>
-public class Program
+public class Program : MinimalWebProgram
 {
     /// <summary>
     /// The application entry point.
@@ -14,11 +15,11 @@ public class Program
     /// <returns>A <see cref="Task"/> that represents the running application.</returns>
     public static Task Main(string[] args)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        var builder = CreateHostBuilder(args);
 
         builder.Services.AddCdnOrigin(builder.Configuration);
 
-        WebApplication app = builder.Build();
+        var app = builder.Build();
 
         app.UseCdnOrigin();
 
