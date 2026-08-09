@@ -1,5 +1,6 @@
 using System.Net;
 using Codebelt.Extensions.Xunit;
+using Cuemon.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders;
 using Xunit;
 
@@ -63,7 +64,7 @@ public class CaseInsensitivePathTest : Test
     [Fact]
     public async Task Get_ShouldServeEveryCasingVariant_WhenCanonicalFilesUseDifferentCasing()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
 
         foreach (CaseVariant variant in CaseVariants)
         {
@@ -72,7 +73,7 @@ public class CaseInsensitivePathTest : Test
 
         using var client = application.CreateClient();
         using var legacy = new LegacyCaseInsensitivePhysicalFileProvider(application.Content.Root);
-        using var modern = new CaseInsensitivePhysicalFileProvider(application.Content.Root);
+        using var modern = new PortablePhysicalFileProvider(application.Content.Root);
 
         foreach (CaseVariant variant in CaseVariants)
         {

@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Codebelt.Extensions.Xunit;
+using Codebelt.Extensions.Xunit.Hosting.AspNetCore;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Codebelt.Cdn.Origin;
@@ -15,7 +18,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldEmitRevalidateCacheControl()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/book.txt");
@@ -31,10 +34,11 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldEmitImmutableCacheControl_ForConfiguredPrefix()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
         {
             ["CdnOrigin:Cache:ImmutablePathPrefixes:0"] = "/assets/"
         });
+
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/assets/app.4f2c.js");
@@ -48,7 +52,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldEmitEntityTagAndLastModified()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/book.txt");
@@ -60,7 +64,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldReturnNotModified_ForMatchingIfNoneMatch()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var first = await client.GetAsync("/book.txt");
@@ -77,7 +81,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldReturnNotModified_ForIfModifiedSince()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var first = await client.GetAsync("/book.txt");
@@ -93,7 +97,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldReturnPartialContent_ForRangeRequest()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/book.txt");
@@ -109,7 +113,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldReturnRangeNotSatisfiable_ForUnsatisfiableRange()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/book.txt");
@@ -122,7 +126,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldReturnPartialContent_ForIfRangeWithMatchingEtag()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var first = await client.GetAsync("/book.txt");
@@ -140,7 +144,7 @@ public class HttpCachingTest : Test
     [Fact]
     public async Task Get_ShouldReturnFullContent_ForIfRangeWithStaleEtag()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/book.txt");

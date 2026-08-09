@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http;
 using Codebelt.Extensions.Xunit;
+using Codebelt.Extensions.Xunit.Hosting.AspNetCore;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Codebelt.Cdn.Origin;
@@ -14,7 +17,7 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldAllowAnyOrigin_InPublicMode()
     {
-        await using var application = new CdnOriginTestApplication();
+        using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/styles/site.css");
@@ -30,10 +33,11 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldEchoAllowedOrigin_InRestrictedMode()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Cors:AllowedOrigins:0"] = "https://allowed.example"
         });
+
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/styles/site.css");
@@ -47,7 +51,7 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldNotAllowDisallowedOrigin_InRestrictedMode()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Cors:AllowedOrigins:0"] = "https://allowed.example"
         });
@@ -63,7 +67,7 @@ public class CorsTest : Test
     [Fact]
     public async Task Options_ShouldHandlePreflight()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Options, "/styles/site.css");
@@ -77,7 +81,7 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldEmitTimingAllowOrigin_WhenEnabled()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Cors:TimingAllowOrigin"] = "true"
         });
@@ -92,11 +96,12 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldEmitTimingAllowOrigin_WithRestrictedOrigins()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Cors:AllowedOrigins:0"] = "https://a.example",
             ["CdnOrigin:Cors:TimingAllowOrigin"] = "true"
         });
+
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/styles/site.css");
@@ -108,10 +113,11 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldOmitCorsHeaders_WhenDisabled()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Cors:Enabled"] = "false"
         });
+
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/styles/site.css");
@@ -125,10 +131,11 @@ public class CorsTest : Test
     [Fact]
     public async Task Get_ShouldOmitCrossOriginResourcePolicy_WhenNotConfigured()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Cors:CrossOriginResourcePolicy"] = ""
         });
+
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/styles/site.css");

@@ -1,4 +1,5 @@
 using Codebelt.Extensions.Xunit;
+using Codebelt.Extensions.Xunit.Hosting.AspNetCore;
 using Xunit;
 
 namespace Codebelt.Cdn.Origin;
@@ -13,10 +14,11 @@ public class StartupValidationTest : Test
     public async Task Startup_ShouldFail_WhenContentRootDoesNotExist()
     {
         var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
         {
             ["CdnOrigin:ContentRoot"] = missing
         });
+
 
         var exception = Assert.ThrowsAny<Exception>(() => application.CreateClient());
 
@@ -26,7 +28,7 @@ public class StartupValidationTest : Test
     [Fact]
     public async Task Startup_ShouldFail_WhenWildcardCombinedWithCredentials()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
         {
             ["CdnOrigin:Cors:AllowedOrigins:0"] = "*",
             ["CdnOrigin:Cors:AllowCredentials"] = "true"

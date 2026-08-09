@@ -1,7 +1,12 @@
+using Codebelt.Extensions.Xunit;
+using Codebelt.Extensions.Xunit.Hosting;
+using Codebelt.Extensions.Xunit.Hosting.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Xunit;
 
 namespace Codebelt.Cdn.Origin;
 
@@ -9,14 +14,14 @@ namespace Codebelt.Cdn.Origin;
 /// Hosts the real Static Content Provider pipeline over an isolated temporary content directory using
 /// <see cref="WebApplicationFactory{TEntryPoint}"/>.
 /// </summary>
-public sealed class CdnOriginTestApplication : WebApplicationFactory<Program>
+public sealed class CdnOriginTestApplication : Test
 {
-    private readonly Dictionary<string, string?> _settings;
+    private readonly IHostTest _hostTest;
 
-    public CdnOriginTestApplication(IDictionary<string, string?>? settings = null)
+    public CdnOriginTestApplication(ITestOutputHelper output, IDictionary<string, string> settings = null) : base(output)
     {
         Content = new TempContent();
-        _settings = new Dictionary<string, string?>(StringComparer.Ordinal)
+        var defaultSettings = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["CdnOrigin:ContentRoot"] = Content.Root
         };
@@ -25,25 +30,43 @@ public sealed class CdnOriginTestApplication : WebApplicationFactory<Program>
         {
             foreach (var setting in settings)
             {
-                _settings[setting.Key] = setting.Value;
+                defaultSettings[setting.Key] = setting.Value;
             }
         }
+
+        _hostTest = WebApplicationTestFactory.Create<Program>(builder =>
+        {
+            builder.UseEnvironment(Environments.Production);
+            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(defaultSettings));
+        }, new ManagedWebApplicationFixture<Program>());
+    }
+
+    public HttpClient CreateClient()
+    {
+        return _hostTest.Host.GetTestClient();
     }
 
     public TempContent Content { get; }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    protected override void OnDisposeManagedResources()
     {
-        builder.UseEnvironment(Environments.Production);
-        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(_settings));
+        _hostTest?.Dispose();
+        Content.Dispose();
+        base.OnDisposeManagedResources();
     }
 
-    protected override void Dispose(bool disposing)
+    protected override async ValueTask OnDisposeManagedResourcesAsync()
     {
-        base.Dispose(disposing);
-        if (disposing)
+        if (_hostTest is IAsyncDisposable asyncDisposable)
         {
-            Content.Dispose();
+            await asyncDisposable.DisposeAsync().ConfigureAwait(false);
         }
+        else
+        {
+            _hostTest?.Dispose();
+        }
+
+        Content.Dispose();
+        await base.OnDisposeManagedResourcesAsync().ConfigureAwait(false);
     }
 }

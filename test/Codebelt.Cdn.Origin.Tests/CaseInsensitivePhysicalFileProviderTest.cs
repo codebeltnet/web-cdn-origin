@@ -1,4 +1,5 @@
 using Codebelt.Extensions.Xunit;
+using Cuemon.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Xunit;
@@ -15,7 +16,7 @@ public class CaseInsensitivePhysicalFileProviderTest : Test
     public void GetFileInfo_ShouldResolveMixedCaseFile_AndReuseResolvedPath()
     {
         using var content = CreateContent();
-        using var provider = new CaseInsensitivePhysicalFileProvider(content.Path);
+        using var provider = new PortablePhysicalFileProvider(content.Path);
 
         IFileInfo first = provider.GetFileInfo("/styles/SITE.CSS");
         IFileInfo second = provider.GetFileInfo("/styles/site.css");
@@ -29,7 +30,7 @@ public class CaseInsensitivePhysicalFileProviderTest : Test
     public void GetDirectoryContents_ShouldResolveMixedCaseDirectory()
     {
         using var content = CreateContent();
-        using var provider = new CaseInsensitivePhysicalFileProvider(content.Path);
+        using var provider = new PortablePhysicalFileProvider(content.Path);
 
         IDirectoryContents contents = provider.GetDirectoryContents("/StYlEs");
 
@@ -41,7 +42,7 @@ public class CaseInsensitivePhysicalFileProviderTest : Test
     public void GetFileInfo_ShouldReturnNotFound_ForEmptyOrMissingPath()
     {
         using var content = CreateContent();
-        using var provider = new CaseInsensitivePhysicalFileProvider(content.Path);
+        using var provider = new PortablePhysicalFileProvider(content.Path);
 
         Assert.False(provider.GetFileInfo(string.Empty).Exists);
         Assert.False(provider.GetFileInfo("/").Exists);
@@ -53,14 +54,14 @@ public class CaseInsensitivePhysicalFileProviderTest : Test
     {
         var missingRoot = Path.Combine(Path.GetTempPath(), "cdn-origin-missing", Guid.NewGuid().ToString("N"));
 
-        Assert.Throws<DirectoryNotFoundException>(() => new CaseInsensitivePhysicalFileProvider(missingRoot));
+        Assert.Throws<DirectoryNotFoundException>(() => new PortablePhysicalFileProvider(missingRoot));
     }
 
     [Fact]
     public void Watch_ShouldResolveMixedCaseLiteralPath()
     {
         using var content = CreateContent();
-        using var provider = new CaseInsensitivePhysicalFileProvider(content.Path);
+        using var provider = new PortablePhysicalFileProvider(content.Path);
 
         IChangeToken token = provider.Watch("STYLES/SITE.CSS");
 
@@ -73,7 +74,7 @@ public class CaseInsensitivePhysicalFileProviderTest : Test
     public void Watch_ShouldPreserveGlobFilter()
     {
         using var content = CreateContent();
-        using var provider = new CaseInsensitivePhysicalFileProvider(content.Path);
+        using var provider = new PortablePhysicalFileProvider(content.Path);
 
         IChangeToken token = provider.Watch("STYLES/*.CSS");
 
@@ -84,7 +85,7 @@ public class CaseInsensitivePhysicalFileProviderTest : Test
     public void Watch_ShouldReturnToken_ForEmptyFilter()
     {
         using var content = CreateContent();
-        using var provider = new CaseInsensitivePhysicalFileProvider(content.Path);
+        using var provider = new PortablePhysicalFileProvider(content.Path);
 
         Assert.NotNull(provider.Watch(string.Empty));
     }

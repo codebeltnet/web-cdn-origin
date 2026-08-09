@@ -1,6 +1,10 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime;
 using Codebelt.Extensions.Xunit;
+using Codebelt.Extensions.Xunit.Hosting.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Codebelt.Cdn.Origin;
@@ -14,7 +18,7 @@ public class CompressionTest : Test
     [Fact]
     public async Task Get_ShouldNotCompress_WhenCompressionDisabled()
     {
-        await using var application = new CdnOriginTestApplication();
+        using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/styles/site.css");
@@ -28,10 +32,11 @@ public class CompressionTest : Test
     [Fact]
     public async Task Get_ShouldCompressCompressibleContent_WhenEnabled()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Compression:Enabled"] = "true"
         });
+
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/styles/site.css");
@@ -45,10 +50,11 @@ public class CompressionTest : Test
     [Fact]
     public async Task Get_ShouldNotCompressPreCompressedContent_WhenEnabled()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>()
         {
             ["CdnOrigin:Compression:Enabled"] = "true"
         });
+
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/logo.png");

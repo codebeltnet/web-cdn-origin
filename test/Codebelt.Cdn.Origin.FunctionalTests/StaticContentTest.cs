@@ -14,7 +14,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldServeExistingFile()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/styles/site.css");
@@ -27,7 +27,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldReturnNotFound_ForMissingFile()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/does-not-exist.css");
@@ -38,7 +38,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldServeStandardDefaultDocument_ForRootRequest()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/");
@@ -50,7 +50,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldServeConfiguredDefaultDocument()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
         {
             ["CdnOrigin:DefaultDocuments:0"] = "index.html"
         });
@@ -65,7 +65,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Head_ShouldReturnHeadersWithoutBody()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Head, "/book.txt");
@@ -79,7 +79,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldRejectUnknownContentType_ByDefault()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/notes.unknownext");
@@ -90,7 +90,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldServeUnknownContentType_WhenConfigured()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
         {
             ["CdnOrigin:ContentTypes:ServeUnknownFileTypes"] = "true",
             ["CdnOrigin:ContentTypes:DefaultContentType"] = "application/octet-stream"
@@ -106,7 +106,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldServeCustomMimeMapping()
     {
-        await using var application = new CdnOriginTestApplication(new Dictionary<string, string?>
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
         {
             ["CdnOrigin:ContentTypes:Mappings:.unknownext"] = "application/x-note"
         });
@@ -121,7 +121,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task Get_ShouldBlockPathTraversal()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var response = await client.GetAsync("/%2e%2e/%2e%2e/appsettings.json");
@@ -130,12 +130,33 @@ public class StaticContentTest : Test
         Assert.DoesNotContain("CdnOrigin", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task Get_ShouldRespectFilesystemCaseSemantics()
+    {
+        await using var application = new CdnOriginTestApplication(TestOutput);
+        using var client = application.CreateClient();
+
+        using var exact = await client.GetAsync("/styles/site.css");
+        using var wrongCase = await client.GetAsync("/styles/SITE.CSS");
+
+        Assert.Equal(HttpStatusCode.OK, exact.StatusCode);
+
+        if (OperatingSystem.IsLinux())
+        {
+            Assert.Equal(HttpStatusCode.NotFound, wrongCase.StatusCode);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.OK, wrongCase.StatusCode);
+        }
+    }
+
     [Theory]
     [InlineData("POST")]
     [InlineData("DELETE")]
     public async Task UnsupportedMethod_ShouldReturnMethodNotAllowed_ForExistingFile(string method)
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(new HttpMethod(method), "/styles/site.css");
@@ -149,7 +170,7 @@ public class StaticContentTest : Test
     [Fact]
     public async Task UnsupportedMethod_ShouldReturnNotFound_ForMissingFile()
     {
-        await using var application = new CdnOriginTestApplication();
+        await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/missing.css");
