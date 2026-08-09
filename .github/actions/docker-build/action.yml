@@ -1,0 +1,39 @@
+name: Build Docker image
+description: Build a Docker image into the local Docker daemon without pushing it.
+
+inputs:
+  context:
+    description: Docker build context.
+    required: false
+    default: .
+  file:
+    description: Dockerfile path.
+    required: false
+    default: src/Codebelt.Cdn.Origin/Dockerfile
+  image:
+    description: Fully qualified local image reference, including its tag.
+    required: true
+
+outputs:
+  image-id:
+    description: The local Docker image ID.
+    value: ${{ steps.build.outputs.image-id }}
+
+runs:
+  using: composite
+  steps:
+    - id: build
+      name: Build image
+      shell: bash
+      env:
+        BUILD_CONTEXT: ${{ inputs.context }}
+        DOCKERFILE: ${{ inputs.file }}
+        IMAGE: ${{ inputs.image }}
+      run: |
+        set -euo pipefail
+
+        test -n "$IMAGE"
+        docker build --pull --file "$DOCKERFILE" --tag "$IMAGE" "$BUILD_CONTEXT"
+
+        image_id="$(docker image inspect --format '{{.Id}}' "$IMAGE")"
+        printf 'image-id=%s\n' "$image_id" >> "$GITHUB_OUTPUT"

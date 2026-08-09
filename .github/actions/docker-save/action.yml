@@ -1,0 +1,37 @@
+name: Save Docker image
+description: Save a local Docker image to a tar archive without contacting a registry.
+
+inputs:
+  image:
+    description: Fully qualified local image reference, including its tag.
+    required: true
+  tarball:
+    description: Output path for the Docker image tar archive.
+    required: true
+
+outputs:
+  tarball:
+    description: The saved Docker image tar archive path.
+    value: ${{ steps.save.outputs.tarball }}
+
+runs:
+  using: composite
+  steps:
+    - id: save
+      name: Save image archive
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        TARBALL: ${{ inputs.tarball }}
+      run: |
+        set -euo pipefail
+
+        test -n "$IMAGE"
+        test -n "$TARBALL"
+        docker image inspect "$IMAGE" >/dev/null
+
+        mkdir -p "$(dirname -- "$TARBALL")"
+        docker image save --output "$TARBALL" "$IMAGE"
+        test -s "$TARBALL"
+
+        printf 'tarball=%s\n' "$TARBALL" >> "$GITHUB_OUTPUT"

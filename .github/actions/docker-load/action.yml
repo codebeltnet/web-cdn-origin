@@ -1,0 +1,34 @@
+name: Load Docker image
+description: Load a Docker image tar archive into the local Docker daemon.
+
+inputs:
+  image:
+    description: Fully qualified image reference expected after loading.
+    required: true
+  tarball:
+    description: Docker image tar archive path.
+    required: true
+
+outputs:
+  image-id:
+    description: The loaded Docker image ID.
+    value: ${{ steps.load.outputs.image-id }}
+
+runs:
+  using: composite
+  steps:
+    - id: load
+      name: Load image archive
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        TARBALL: ${{ inputs.tarball }}
+      run: |
+        set -euo pipefail
+
+        test -n "$IMAGE"
+        test -f "$TARBALL"
+        docker image load --input "$TARBALL"
+
+        image_id="$(docker image inspect --format '{{.Id}}' "$IMAGE")"
+        printf 'image-id=%s\n' "$image_id" >> "$GITHUB_OUTPUT"
