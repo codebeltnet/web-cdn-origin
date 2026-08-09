@@ -11,13 +11,22 @@ on:
         default: false
       publish_image:
         type: boolean
-        description: Promote the saved container image to the configured registry after all gates pass.
+        description: Publish the saved container image to the configured Staging registry after all gates pass.
         default: false
       container_repository:
         type: string
         description: Fully qualified image repository without a tag.
         required: true
         default: jcr.codebelt.net/geekle/web-cdn-origin
+      promote_dockerhub:
+        type: boolean
+        description: Promote the verified Staging image to Docker Hub after Production approval.
+        default: false
+      dockerhub_repository:
+        type: string
+        description: Docker Hub repository without the registry host or a tag.
+        required: true
+        default: codebeltnet/web-cdn-origin
 
 permissions:
   contents: read
@@ -32,6 +41,8 @@ jobs:
       publish-image: ${{ steps.vars.outputs.publish-image }}
       container-repository: ${{ steps.vars.outputs.container-repository }}
       container-registry: ${{ steps.vars.outputs.container-registry }}
+      promote-dockerhub: ${{ steps.vars.outputs.promote-dockerhub }}
+      dockerhub-repository: ${{ steps.vars.outputs.dockerhub-repository }}
     steps:
       - id: vars
         name: Calculate workflow variables
@@ -40,7 +51,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           RUN_MAC_INPUT: ${{ inputs.run_mac_tests }}
           PUBLISH_IMAGE_INPUT: ${{ inputs.publish_image }}
+          PROMOTE_DOCKERHUB_INPUT: ${{ inputs.promote_dockerhub }}
           CONTAINER_REPOSITORY_INPUT: ${{ inputs.container_repository }}
+          DOCKERHUB_REPOSITORY_INPUT: ${{ inputs.dockerhub_repository }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           CURRENT_REPOSITORY: ${{ github.repository }}
         run: |
@@ -58,6 +71,16 @@ jobs:
             echo "publish-image=false" >> "$GITHUB_OUTPUT"
           fi
 
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$PROMOTE_DOCKERHUB_INPUT" == "true" ]]; then
+            if [[ "$PUBLISH_IMAGE_INPUT" != "true" ]]; then
+              echo "::error::promote_dockerhub requires publish_image to be true."
+              exit 1
+            fi
+            echo "promote-dockerhub=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "promote-dockerhub=false" >> "$GITHUB_OUTPUT"
+          fi
+
           if [[ "$EVENT_NAME" == "pull_request" && "$HEAD_REPOSITORY" != "$CURRENT_REPOSITORY" ]]; then
             echo "run-privileged-jobs=false" >> "$GITHUB_OUTPUT"
           else
@@ -69,13 +92,26 @@ jobs:
             container_repository="jcr.codebelt.net/geekle/web-cdn-origin"
           fi
 
-          if [[ ! "$container_repository" =~ ^[a-z0-9.-]+(:[0-9]+)?/[a-z0-9._/-]+$ ]]; then
+          container_repository_pattern='^[a-z0-9.-]+(:[0-9]+)?/[a-z0-9._/-]+$'
+          if [[ ! "$container_repository" =~ $container_repository_pattern ]]; then
             echo "::error::container_repository must be a lowercase fully qualified image repository without a tag."
             exit 1
           fi
 
           printf 'container-repository=%s\n' "$container_repository" >> "$GITHUB_OUTPUT"
           printf 'container-registry=%s\n' "${container_repository%%/*}" >> "$GITHUB_OUTPUT"
+
+          dockerhub_repository="$DOCKERHUB_REPOSITORY_INPUT"
+          if [[ -z "$dockerhub_repository" ]]; then
+            dockerhub_repository="codebeltnet/web-cdn-origin"
+          fi
+
+          if [[ ! "$dockerhub_repository" =~ ^[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*$ ]]; then
+            echo "::error::dockerhub_repository must be a lowercase Docker Hub namespace/repository without a tag."
+            exit 1
+          fi
+
+          printf 'dockerhub-repository=%s\n' "$dockerhub_repository" >> "$GITHUB_OUTPUT"
 
   build:
     name: call-build
@@ -225,35 +261,56 @@ jobs:
     name: build-container
     needs: [init, build]
     runs-on: ubuntu-24.04
+    outputs:
+      semver: ${{ steps.tag_semver.outputs.version }}
+      trunkver: ${{ steps.tag_trunkver.outputs.trunkver }}
     permissions:
       contents: read
     env:
-      IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.build.outputs.version }}
+      IMAGE_REPOSITORY: ${{ needs.init.outputs.container-repository }}
+      BUILD_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:build-${{ github.run_id }}-${{ github.run_attempt }}
+      BUILD_VERSION: ${{ needs.build.outputs.version }}
       IMAGE_ARTIFACT_NAME: container-image-${{ github.run_id }}-${{ github.run_attempt }}
       SBOM_ARTIFACT_NAME: container-sbom-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check out source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Build Docker image
         uses: ./.github/actions/docker-build
         with:
-          image: ${{ env.IMAGE_REF }}
+          image: ${{ env.BUILD_IMAGE_REF }}
           context: .
           file: src/Codebelt.Cdn.Origin/Dockerfile
+
+      - id: tag_semver
+        name: Tag image with SemVer
+        uses: ./.github/actions/docker-tag-semver
+        with:
+          source-image: ${{ env.BUILD_IMAGE_REF }}
+          repository: ${{ env.IMAGE_REPOSITORY }}
+          version: ${{ env.BUILD_VERSION }}
+
+      - id: tag_trunkver
+        name: Tag image with TrunkVer
+        uses: ./.github/actions/docker-tag-trunkver
+        with:
+          source-image: ${{ env.BUILD_IMAGE_REF }}
+          repository: ${{ env.IMAGE_REPOSITORY }}
 
       - name: Save Docker image
         uses: ./.github/actions/docker-save
         with:
-          image: ${{ env.IMAGE_REF }}
+          image: ${{ steps.tag_semver.outputs.image }}
+          additional-images: ${{ steps.tag_trunkver.outputs.image }}
           tarball: ${{ runner.temp }}/codebelt-cdn-origin/image.tar
 
       - name: Generate container SBOM
         uses: ./.github/actions/container-sbom
         with:
-          image: ${{ env.IMAGE_REF }}
+          image: ${{ steps.tag_semver.outputs.image }}
           sbom-path: ${{ runner.temp }}/codebelt-cdn-origin/sbom.spdx.json
 
       - name: Upload saved image tarball
@@ -278,13 +335,14 @@ jobs:
     name: publish-container
     needs: [init, build, test_qualitygate, sonarcloud, codecov, codeql, container_build]
     runs-on: ubuntu-24.04
-    environment: Production
+    environment: Staging
     permissions:
       contents: read
     outputs:
-      image-digest: ${{ steps.push.outputs.image-digest }}
+      image-digest: ${{ steps.push_semver.outputs.image-digest }}
     env:
-      IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.build.outputs.version }}
+      SEMVER_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.container_build.outputs.semver }}
+      TRUNKVER_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.container_build.outputs.trunkver }}
       IMAGE_ARTIFACT_NAME: container-image-${{ github.run_id }}-${{ github.run_attempt }}
       REGISTRY: ${{ needs.init.outputs.container-registry }}
     steps:
@@ -302,21 +360,55 @@ jobs:
       - name: Load saved Docker image
         uses: ./.github/actions/docker-load
         with:
-          image: ${{ env.IMAGE_REF }}
+          image: ${{ env.SEMVER_IMAGE_REF }}
           tarball: ${{ runner.temp }}/container-image/image.tar
+
+      - name: Verify saved image tags
+        shell: bash
+        env:
+          SEMVER_IMAGE_REF: ${{ env.SEMVER_IMAGE_REF }}
+          TRUNKVER_IMAGE_REF: ${{ env.TRUNKVER_IMAGE_REF }}
+        run: |
+          set -euo pipefail
+
+          semver_image_id="$(docker image inspect --format '{{.Id}}' "$SEMVER_IMAGE_REF")"
+          trunkver_image_id="$(docker image inspect --format '{{.Id}}' "$TRUNKVER_IMAGE_REF")"
+          if [[ "$semver_image_id" != "$trunkver_image_id" ]]; then
+            echo "::error::SemVer and TrunkVer tags do not refer to the same loaded image."
+            exit 1
+          fi
 
       - name: Log in to image registry
         uses: ./.github/actions/docker-login
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.JCR_USERNAME }}
-          password: ${{ secrets.JCR_PASSWORD }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - id: push
-        name: Push loaded Docker image
+      - id: push_semver
+        name: Push SemVer image
         uses: ./.github/actions/docker-push
         with:
-          image: ${{ env.IMAGE_REF }}
+          image: ${{ env.SEMVER_IMAGE_REF }}
+
+      - id: push_trunkver
+        name: Push TrunkVer image
+        uses: ./.github/actions/docker-push
+        with:
+          image: ${{ env.TRUNKVER_IMAGE_REF }}
+
+      - name: Verify Staging tag digests
+        shell: bash
+        env:
+          SEMVER_DIGEST: ${{ steps.push_semver.outputs.image-digest }}
+          TRUNKVER_DIGEST: ${{ steps.push_trunkver.outputs.image-digest }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$SEMVER_DIGEST" || "$SEMVER_DIGEST" != "$TRUNKVER_DIGEST" ]]; then
+            echo "::error::SemVer and TrunkVer tags were published with different image digests."
+            exit 1
+          fi
 
       - name: Log out of image registry
         if: ${{ always() }}
@@ -324,6 +416,157 @@ jobs:
         env:
           REGISTRY: ${{ env.REGISTRY }}
         run: docker logout "$REGISTRY"
+
+  container_promote_dockerhub:
+    if: ${{ always() && needs.init.outputs.publish-image == 'true' && needs.init.outputs.promote-dockerhub == 'true' && github.event_name != 'pull_request' && needs.container_attest.result == 'success' }}
+    name: promote-container-dockerhub
+    needs: [init, container_build, container_publish, container_attest]
+    runs-on: ubuntu-24.04
+    environment: Production
+    permissions:
+      contents: read
+    outputs:
+      image-digest: ${{ steps.push_semver.outputs.image-digest }}
+    env:
+      STAGING_SEMVER_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.container_build.outputs.semver }}
+      STAGING_TRUNKVER_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.container_build.outputs.trunkver }}
+      STAGING_IMAGE_DIGEST: ${{ needs.container_publish.outputs.image-digest }}
+      DOCKERHUB_REPOSITORY: docker.io/${{ needs.init.outputs.dockerhub-repository }}
+      DOCKERHUB_REGISTRY: docker.io
+      IMAGE_ARTIFACT_NAME: container-image-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check out local actions
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Download saved image tarball
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ env.IMAGE_ARTIFACT_NAME }}
+          path: ${{ runner.temp }}/container-image
+
+      - name: Load saved Staging image
+        uses: ./.github/actions/docker-load
+        with:
+          image: ${{ env.STAGING_SEMVER_IMAGE_REF }}
+          tarball: ${{ runner.temp }}/container-image/image.tar
+
+      - name: Verify saved Staging tags
+        shell: bash
+        env:
+          SEMVER_IMAGE_REF: ${{ env.STAGING_SEMVER_IMAGE_REF }}
+          TRUNKVER_IMAGE_REF: ${{ env.STAGING_TRUNKVER_IMAGE_REF }}
+        run: |
+          set -euo pipefail
+
+          semver_image_id="$(docker image inspect --format '{{.Id}}' "$SEMVER_IMAGE_REF")"
+          trunkver_image_id="$(docker image inspect --format '{{.Id}}' "$TRUNKVER_IMAGE_REF")"
+          if [[ "$semver_image_id" != "$trunkver_image_id" ]]; then
+            echo "::error::The saved SemVer and TrunkVer tags do not refer to the same image."
+            exit 1
+          fi
+
+      - name: Log in to Docker Hub
+        uses: ./.github/actions/docker-login
+        with:
+          registry: ${{ env.DOCKERHUB_REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Retag image with Docker Hub SemVer
+        id: tag_dockerhub_semver
+        uses: ./.github/actions/docker-tag-semver
+        with:
+          source-image: ${{ env.STAGING_SEMVER_IMAGE_REF }}
+          repository: ${{ env.DOCKERHUB_REPOSITORY }}
+          version: ${{ needs.container_build.outputs.semver }}
+
+      - name: Retag image with Docker Hub TrunkVer
+        id: tag_dockerhub_trunkver
+        uses: ./.github/actions/docker-tag-trunkver
+        with:
+          source-image: ${{ env.STAGING_TRUNKVER_IMAGE_REF }}
+          repository: ${{ env.DOCKERHUB_REPOSITORY }}
+          trunkver: ${{ needs.container_build.outputs.trunkver }}
+
+      - id: push_semver
+        name: Push Docker Hub SemVer image
+        uses: ./.github/actions/docker-push
+        with:
+          image: ${{ steps.tag_dockerhub_semver.outputs.image }}
+
+      - id: push_trunkver
+        name: Push Docker Hub TrunkVer image
+        uses: ./.github/actions/docker-push
+        with:
+          image: ${{ steps.tag_dockerhub_trunkver.outputs.image }}
+
+      - name: Verify Docker Hub tag digests
+        shell: bash
+        env:
+          STAGING_IMAGE_DIGEST: ${{ env.STAGING_IMAGE_DIGEST }}
+          SEMVER_DIGEST: ${{ steps.push_semver.outputs.image-digest }}
+          TRUNKVER_DIGEST: ${{ steps.push_trunkver.outputs.image-digest }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$SEMVER_DIGEST" || "$SEMVER_DIGEST" != "$TRUNKVER_DIGEST" ]]; then
+            echo "::error::Docker Hub SemVer and TrunkVer tags have different image digests."
+            exit 1
+          fi
+
+          if [[ -n "$STAGING_IMAGE_DIGEST" && "$STAGING_IMAGE_DIGEST" != "$SEMVER_DIGEST" ]]; then
+            echo "::error::The Docker Hub digest differs from the verified Staging digest."
+            exit 1
+          fi
+
+      - name: Log out of Docker Hub
+        if: ${{ always() }}
+        shell: bash
+        env:
+          REGISTRY: ${{ env.DOCKERHUB_REGISTRY }}
+        run: docker logout "$REGISTRY"
+
+  container_attest_dockerhub:
+    if: ${{ always() && needs.init.outputs.publish-image == 'true' && needs.init.outputs.promote-dockerhub == 'true' && github.event_name != 'pull_request' && needs.container_promote_dockerhub.result == 'success' }}
+    name: attest-container-dockerhub
+    needs: [init, container_build, container_promote_dockerhub]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+      packages: write
+    env:
+      IMAGE_REPOSITORY: docker.io/${{ needs.init.outputs.dockerhub-repository }}
+      IMAGE_DIGEST: ${{ needs.container_promote_dockerhub.outputs.image-digest }}
+      SBOM_ARTIFACT_NAME: container-sbom-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check out local actions
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Download container SBOM
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ env.SBOM_ARTIFACT_NAME }}
+          path: ${{ runner.temp }}/container-sbom
+
+      - name: Attest Docker Hub container provenance
+        uses: ./.github/actions/container-attest-provenance
+        with:
+          subject-name: ${{ env.IMAGE_REPOSITORY }}
+          subject-digest: ${{ env.IMAGE_DIGEST }}
+
+      - name: Attest Docker Hub container SBOM
+        uses: ./.github/actions/container-attest-sbom
+        with:
+          subject-name: ${{ env.IMAGE_REPOSITORY }}
+          subject-digest: ${{ env.IMAGE_DIGEST }}
+          sbom-path: ${{ runner.temp }}/container-sbom/sbom.spdx.json
 
   container_attest:
     if: ${{ always() && needs.init.outputs.publish-image == 'true' && github.event_name != 'pull_request' && needs.container_publish.result == 'success' }}
