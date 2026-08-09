@@ -8,6 +8,10 @@ inputs:
   tarball:
     description: Output path for the Docker image tar archive.
     required: true
+  additional-images:
+    description: Optional newline-delimited image references to include in the same archive.
+    required: false
+    default: ''
 
 outputs:
   tarball:
@@ -23,15 +27,26 @@ runs:
       env:
         IMAGE: ${{ inputs.image }}
         TARBALL: ${{ inputs.tarball }}
+        ADDITIONAL_IMAGES: ${{ inputs.additional-images }}
       run: |
         set -euo pipefail
 
         test -n "$IMAGE"
         test -n "$TARBALL"
-        docker image inspect "$IMAGE" >/dev/null
+
+        images=("$IMAGE")
+        while IFS= read -r additional_image; do
+          if [[ -n "$additional_image" ]]; then
+            images+=("$additional_image")
+          fi
+        done <<< "$ADDITIONAL_IMAGES"
+
+        for image in "${images[@]}"; do
+          docker image inspect "$image" >/dev/null
+        done
 
         mkdir -p "$(dirname -- "$TARBALL")"
-        docker image save --output "$TARBALL" "$IMAGE"
+        docker image save --output "$TARBALL" "${images[@]}"
         test -s "$TARBALL"
 
         printf 'tarball=%s\n' "$TARBALL" >> "$GITHUB_OUTPUT"
