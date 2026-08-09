@@ -4,9 +4,9 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-08-01
+## [2.0.0] - 2026-08-09
 
-This is a **major** release representing a deliberate modernization of the Static Content Provider. The application keeps its focus — a small, read-only, framework-first static content origin for CDN and segregated asset-host scenarios — but the implementation, configuration contract, and container are modernized.
+This is a **major** release representing a deliberate modernization of the Static Content Provider. The application keeps its focus — a small, read-only, framework-first static content origin for CDN and segregated asset-host scenarios — but the implementation, configuration contract, container, and DevOps are fully modernized for .NET 10 and contemporary cloud-native patterns.
 
 ### Added
 
@@ -18,16 +18,25 @@ This is a **major** release representing a deliberate modernization of the Stati
 - Operational endpoints `/health/live` and `/health/ready` (readiness verifies the content root is present and readable). Health responses are `Cache-Control: no-store`,
 - `405 Method Not Allowed` with an `Allow` header for unsupported methods against existing files,
 - Structured startup logging of the effective, non-sensitive configuration,
-- Hardened container: .NET 10 runtime, non-root user, non-privileged port `8080`, read-only-root-filesystem friendly, minimal image,
-- `AGENTS.md`, `.editorconfig`, centralized build/package configuration, CI pipeline, and a comprehensive unit + functional test suite.
+- Case-insensitive path lookup via `PortablePhysicalFileProvider` from the Codebelt ecosystem, so asset URLs work consistently on case-sensitive and case-insensitive file systems. Symlink and junction resolution prevents traversal-based bypasses,
+- Cache prefix matching is now case-insensitive for robustness on case-insensitive filesystems,
+- Hardened container: .NET 10 runtime, non-root user, non-privileged port `8080`, read-only-root-filesystem compatible, minimal image,
+- Multi-architecture container support: X64 and ARM64 images built and published to registries,
+- Reusable GitHub composite actions for container lifecycle: `docker-build`, `docker-load`, `docker-save`, `docker-push`, `docker-login`, `docker-tag-semver`, `docker-tag-trunkver`, and supply-chain security actions (`container-sbom`, `container-attest-sbom`, `container-attest-provenance`),
+- Docker Hub promotion workflow with gated Production environment approval and SemVer/TrunkVer tagging strategy,
+- Multi-OS test matrix validating across Ubuntu 24.04, Windows 2025, and macOS 26 in both Debug and Release configurations,
+- Test environment configuration (`testEnvironments.json`) for consistent Docker-based test execution,
+- Comprehensive unit and functional test suite using xUnit v3 with `Codebelt.Extensions.Xunit` patterns,
+- Governance and engineering documentation: `AGENTS.md` defining build rules, test conventions, and version discipline; `.editorconfig` for project-wide consistency; centralized `Directory.Build.props` and `Directory.Packages.props`; and complete CI pipeline with artifact management.
 
 ### Changed
 
 - **Configuration is now hierarchical and strongly typed.** The flat `1.x` environment variables are replaced by the `CdnOrigin` section (still overridable via environment variables). See the migration table in `README.md`,
 - Cache durations are expressed as standard `TimeSpan` values instead of a numeric value plus a separate time-unit variable,
 - `ETag` and `Last-Modified` are now produced by the ASP.NET Core static file middleware from file identity and modification metadata. The server no longer reads or hashes file contents to build an `ETag`,
-- The default container port is `8080` (was `80`) and the process runs as a non-root user.
-- Case-insensitive path lookup is retained through a framework-only physical-file-provider decorator so asset URLs work on case-sensitive and case-insensitive file systems.
+- The default container port is `8080` (was `80`) and the process runs as a non-root user,
+- Application startup now follows `MinimalWebProgram` bootstrap pattern for framework-first initialization,
+- Functional tests migrated to `Codebelt.Extensions.Xunit` patterns with modern `WebApplication` test server and `Microsoft.Testing.Platform` runner.
 
 ### Removed
 
@@ -36,7 +45,8 @@ This is a **major** release representing a deliberate modernization of the Stati
 - **`Expires`** header. `Cache-Control: max-age` is authoritative; the redundant `Expires` header is gone,
 - **Server-side response caching** (`AddResponseCaching`). A CDN origin should not cache its own responses; the CDN and HTTP clients handle caching,
 - **Cuemon dependencies** and the Visual Studio container-tooling package. The production project now references only the ASP.NET Core shared framework,
-- **`ServeUnknownFileTypes = true`.** Unknown file types are now rejected by default; add explicit MIME mappings through configuration to serve additional types.
+- **`ServeUnknownFileTypes = true`.** Unknown file types are now rejected by default; add explicit MIME mappings through configuration to serve additional types,
+- Legacy `Startup` class and associated extension methods. Modern minimal hosting replaces them.
 
 ### Migration
 
