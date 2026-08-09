@@ -207,6 +207,14 @@ FROM codebeltnet/web-cdn-origin:2.0.0
 COPY ./cdnroot /cdnroot
 ```
 
+## CI and container promotion
+
+Pull requests run the Debug/Release build and Linux/Windows test matrices, optionally including macOS. They also build the Dockerfile once on Linux/amd64, generate an SPDX JSON SBOM, save the image with `docker save`, and upload the tarball as an artifact. No registry credentials or push permissions are available to pull-request builds.
+
+A manually dispatched run can set `publish_image` to `true`. After the quality gates pass, a separate promotion job downloads the saved tarball, loads it with `docker load`, logs in to the registry, and pushes the loaded image. It never rebuilds the Dockerfile. The default repository is `jcr.codebelt.net/geekle/web-cdn-origin`; override `container_repository` when needed.
+
+The promotion job expects `JCR_USERNAME` and `JCR_PASSWORD` repository or `Production` environment secrets. A following attestation job publishes GitHub build-provenance and SBOM attestations for the pushed digest, so the target registry must accept OCI attestation artifacts. The workflow grants OIDC and attestation permissions only to that job.
+
 ## Kubernetes
 
 Deploy with the content mounted read-only and a hardened security context:
