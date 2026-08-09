@@ -56,6 +56,7 @@ jobs:
           DOCKERHUB_REPOSITORY_INPUT: ${{ inputs.dockerhub_repository }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           CURRENT_REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
 
@@ -81,7 +82,7 @@ jobs:
             echo "promote-dockerhub=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if [[ "$EVENT_NAME" == "pull_request" && "$HEAD_REPOSITORY" != "$CURRENT_REPOSITORY" ]]; then
+          if [[ "$EVENT_NAME" == "pull_request" && ( "$HEAD_REPOSITORY" != "$CURRENT_REPOSITORY" || "$PULL_REQUEST_AUTHOR" == "dependabot[bot]" ) ]]; then
             echo "run-privileged-jobs=false" >> "$GITHUB_OUTPUT"
           else
             echo "run-privileged-jobs=true" >> "$GITHUB_OUTPUT"
