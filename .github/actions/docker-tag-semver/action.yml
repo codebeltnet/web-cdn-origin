@@ -1,0 +1,53 @@
+name: Tag Docker image with SemVer
+description: Create a Docker tag from a build version, removing one leading v.
+
+inputs:
+  source-image:
+    description: Fully qualified local source image reference, including its tag.
+    required: true
+  repository:
+    description: Fully qualified target image repository without a tag.
+    required: true
+  version:
+    description: SemVer value, normally from the build job output.
+    required: true
+
+outputs:
+  version:
+    description: Docker-compatible SemVer without a leading v.
+    value: ${{ steps.tag.outputs.version }}
+  image:
+    description: Fully qualified image reference with the SemVer tag.
+    value: ${{ steps.tag.outputs.image }}
+
+runs:
+  using: composite
+  steps:
+    - id: tag
+      name: Create SemVer image tag
+      shell: bash
+      env:
+        SOURCE_IMAGE: ${{ inputs.source-image }}
+        REPOSITORY: ${{ inputs.repository }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        test -n "$SOURCE_IMAGE"
+        test -n "$REPOSITORY"
+        test -n "$VERSION"
+        docker image inspect "$SOURCE_IMAGE" >/dev/null
+
+        version="${VERSION#v}"
+        semver_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$'
+        if [[ ! "$version" =~ $semver_pattern ]]; then
+          echo "::error::The build version '$VERSION' is not a Docker-compatible SemVer after removing a leading v."
+          exit 1
+        fi
+
+        image="$REPOSITORY:$version"
+        docker image tag "$SOURCE_IMAGE" "$image"
+        docker image inspect "$image" >/dev/null
+
+        printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+        printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"

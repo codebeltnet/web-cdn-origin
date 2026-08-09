@@ -1,0 +1,28 @@
+name: Generate container SBOM
+description: Generate an SPDX JSON SBOM for a local Docker image.
+
+inputs:
+  image:
+    description: Fully qualified local image reference, including its tag.
+    required: true
+  sbom-path:
+    description: Output path for the SPDX JSON SBOM.
+    required: true
+
+outputs:
+  sbom-path:
+    description: The generated SBOM path.
+    value: ${{ inputs.sbom-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate SPDX JSON SBOM
+      uses: anchore/sbom-action@e11c554f704a0b820cbf8c51673f6945e0731532 # v0.20.0
+      with:
+        image: ${{ inputs.image }}
+        format: spdx-json
+        output-file: ${{ inputs.sbom-path }}
+        upload-artifact: false
+        upload-release-assets: false
+        dependency-snapshot: false

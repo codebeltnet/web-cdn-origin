@@ -1,0 +1,62 @@
+name: Tag Docker image with TrunkVer
+description: Create a Docker tag using a generated or supplied TrunkVer value.
+
+inputs:
+  source-image:
+    description: Fully qualified local source image reference, including its tag.
+    required: true
+  repository:
+    description: Fully qualified target image repository without a tag.
+    required: true
+  trunkver:
+    description: Existing TrunkVer to reuse during promotion; leave empty to generate one.
+    required: false
+    default: ''
+
+outputs:
+  trunkver:
+    description: Docker-compatible TrunkVer value.
+    value: ${{ steps.tag.outputs.trunkver }}
+  image:
+    description: Fully qualified image reference with the TrunkVer tag.
+    value: ${{ steps.tag.outputs.image }}
+
+runs:
+  using: composite
+  steps:
+    - id: generate
+      name: Generate TrunkVer
+      if: ${{ inputs.trunkver == '' }}
+      uses: crftd-tech/trunkver@4173fc34c1add2a020485db1d255dc1ee8e8c5cc # main
+
+    - id: tag
+      name: Create TrunkVer image tag
+      shell: bash
+      env:
+        SOURCE_IMAGE: ${{ inputs.source-image }}
+        REPOSITORY: ${{ inputs.repository }}
+        GENERATED_TRUNKVER: ${{ steps.generate.outputs.trunkver }}
+        SUPPLIED_TRUNKVER: ${{ inputs.trunkver }}
+      run: |
+        set -euo pipefail
+
+        test -n "$SOURCE_IMAGE"
+        test -n "$REPOSITORY"
+        docker image inspect "$SOURCE_IMAGE" >/dev/null
+
+        trunkver="$SUPPLIED_TRUNKVER"
+        if [[ -z "$trunkver" ]]; then
+          trunkver="$GENERATED_TRUNKVER"
+        fi
+
+        if [[ ! "$trunkver" =~ ^[0-9A-Za-z][0-9A-Za-z_.-]{0,127}$ ]]; then
+          echo "::error::The TrunkVer '$trunkver' is not a valid Docker tag."
+          exit 1
+        fi
+
+        image="$REPOSITORY:$trunkver"
+        docker image tag "$SOURCE_IMAGE" "$image"
+        docker image inspect "$image" >/dev/null
+
+        printf 'trunkver=%s\n' "$trunkver" >> "$GITHUB_OUTPUT"
+        printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"

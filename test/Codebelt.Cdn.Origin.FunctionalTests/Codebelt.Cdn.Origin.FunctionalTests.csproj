@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Codebelt.Cdn.Origin</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Codebelt.Cdn.Origin\Codebelt.Cdn.Origin.csproj" />
+  </ItemGroup>
+
+</Project>

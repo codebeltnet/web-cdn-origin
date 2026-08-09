@@ -1,0 +1,24 @@
+name: Attest container SBOM
+description: Create and registry-publish a GitHub SBOM attestation for a container image.
+
+inputs:
+  subject-name:
+    description: Fully qualified image repository without a tag.
+    required: true
+  subject-digest:
+    description: Immutable image digest in sha256 form.
+    required: true
+  sbom-path:
+    description: SPDX JSON SBOM path.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Attest image SBOM
+      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+      with:
+        subject-name: ${{ inputs.subject-name }}
+        subject-digest: ${{ inputs.subject-digest }}
+        sbom-path: ${{ inputs.sbom-path }}
+        push-to-registry: true

@@ -1,20 +1,28 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
+using Codebelt.Bootstrapper.Web;
+using Codebelt.Cdn.Origin.Hosting;
 
-namespace Codebelt.Cdn.Origin
+namespace Codebelt.Cdn.Origin;
+
+/// <summary>
+/// The entry point of the Static Content Provider.
+/// </summary>
+public class Program : MinimalWebProgram
 {
-    public class Program
+    /// <summary>
+    /// The application entry point.
+    /// </summary>
+    /// <param name="args">The command line arguments.</param>
+    /// <returns>A <see cref="Task"/> that represents the running application.</returns>
+    public static Task Main(string[] args)
     {
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
+        var builder = CreateHostBuilder(args);
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
+        builder.Services.AddCdnOrigin(builder.Configuration);
+
+        var app = builder.Build();
+
+        app.UseCdnOrigin();
+
+        return app.RunAsync();
     }
 }
