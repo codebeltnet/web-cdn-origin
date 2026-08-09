@@ -14,6 +14,7 @@ A small, production-grade, **read-only static content provider** built on **.NET
 - [Configuration reference](#configuration-reference)
 - [Running locally](#running-locally)
 - [Docker](#docker)
+- [CI and container promotion](#ci-and-container-promotion)
 - [Kubernetes](#kubernetes)
 - [AWS CloudFront origin](#aws-cloudfront-origin)
 - [Security considerations](#security-considerations)
@@ -211,9 +212,16 @@ COPY ./cdnroot /cdnroot
 
 Pull requests run the Debug/Release build and Linux/Windows test matrices, optionally including macOS. They also build the Dockerfile once on Linux/amd64, generate an SPDX JSON SBOM, save the image with `docker save`, and upload the tarball as an artifact. No registry credentials or push permissions are available to pull-request builds.
 
-A manually dispatched run can set `publish_image` to `true`. After the quality gates pass, a separate promotion job downloads the saved tarball, loads it with `docker load`, logs in to the registry, and pushes the loaded image. It never rebuilds the Dockerfile. The default repository is `jcr.codebelt.net/geekle/web-cdn-origin`; override `container_repository` when needed.
+The saved image receives two tags:
 
-The promotion job expects `JCR_USERNAME` and `JCR_PASSWORD` repository or `Production` environment secrets. A following attestation job publishes GitHub build-provenance and SBOM attestations for the pushed digest, so the target registry must accept OCI attestation artifacts. The workflow grants OIDC and attestation permissions only to that job.
+- SemVer from `needs.build.outputs.version`, with one leading `v` removed. For example, `v2.0.0` becomes `2.0.0` for compatibility with the existing Docker Hub `1.4.0` naming.
+- A [TrunkVer](https://trunkver.org/) generated once during the container build and reused for both registries.
+
+Use a manually dispatched run with `publish_image: true` to publish the saved tarball to the `Staging` environment. The default staging repository is `jcr.codebelt.net/geekle/web-cdn-origin`; override `container_repository` when needed. Configure `JCR_USERNAME` and `JCR_PASSWORD` as `Staging` environment secrets.
+
+To keep the exact same run artifact, set both `publish_image: true` and `promote_dockerhub: true` on the manual dispatch. The workflow publishes to Staging and then pauses at the protected `Production` environment, allowing you to verify JCR before approving Docker Hub publication. Configure required reviewers for `Production` and add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as its environment secrets. The default Docker Hub repository is `codebeltnet/web-cdn-origin`; override `dockerhub_repository` when needed. A run with `promote_dockerhub: false` intentionally stops after Staging; enabling it on a later run creates a new build artifact.
+
+This is a promotion of one immutable build artifact: the Docker Hub job downloads the same `docker save` tarball, uses `docker load`, retags it for Docker Hub, and pushes both tags. It does not rebuild or pull a new image. Digest gates verify that the SemVer and TrunkVer tags point to the same image in each registry and that the Docker Hub digest matches Staging. Attestation jobs publish GitHub build-provenance and SBOM attestations for the pushed digest, so each target registry must accept OCI attestation artifacts.
 
 ## Kubernetes
 
