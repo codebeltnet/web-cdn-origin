@@ -67,7 +67,7 @@ public static class ContentRootValidator
         string resolved;
         try
         {
-            resolved = Path.GetFullPath(contentRoot);
+            resolved = ResolveFinalDirectoryPath(contentRoot);
         }
         catch (ArgumentException)
         {
@@ -107,12 +107,32 @@ public static class ContentRootValidator
     /// <param name="contentRoot">The fully resolved content root path.</param>
     /// <param name="applicationDirectory">The application base directory.</param>
     /// <returns><c>true</c> if the application directory is the content root or nested within it; otherwise <c>false</c>.</returns>
-    /// <remarks>Comparison is case-insensitive so the guard errs on the side of safety on every filesystem.</remarks>
+    /// <remarks>Symbolic links and junctions are resolved to their final directory targets before the case-insensitive containment check.</remarks>
     public static bool ExposesApplicationFiles(string contentRoot, string applicationDirectory)
     {
-        string root = EnsureTrailingSeparator(Path.GetFullPath(contentRoot));
-        string application = EnsureTrailingSeparator(Path.GetFullPath(applicationDirectory));
+        string root = EnsureTrailingSeparator(ResolveFinalDirectoryPath(contentRoot));
+        string application = EnsureTrailingSeparator(ResolveFinalDirectoryPath(applicationDirectory));
         return application.StartsWith(root, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveFinalDirectoryPath(string path)
+    {
+        return ResolveFinalDirectoryPath(new DirectoryInfo(Path.GetFullPath(path)));
+    }
+
+    private static string ResolveFinalDirectoryPath(DirectoryInfo directory)
+    {
+        DirectoryInfo? parent = directory.Parent;
+        if (parent is null)
+        {
+            return directory.FullName;
+        }
+
+        string candidate = Path.Combine(ResolveFinalDirectoryPath(parent), directory.Name);
+
+        return Directory.Exists(candidate)
+            ? Directory.ResolveLinkTarget(candidate, returnFinalTarget: true)?.FullName ?? candidate
+            : candidate;
     }
 
     private static string EnsureTrailingSeparator(string path)

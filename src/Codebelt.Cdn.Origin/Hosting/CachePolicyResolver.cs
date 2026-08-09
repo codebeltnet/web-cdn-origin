@@ -50,7 +50,7 @@ public sealed class CachePolicyResolver
     {
         for (int i = 0; i < _immutablePrefixes.Length; i++)
         {
-            if (path.StartsWith(_immutablePrefixes[i], StringComparison.Ordinal))
+            if (path.StartsWith(_immutablePrefixes[i], StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

@@ -30,7 +30,7 @@ public sealed class CacheOptions
     /// <summary>
     /// Gets or sets the request path prefixes that select the <see cref="Immutable"/> cache profile.
     /// </summary>
-    /// <value>The request path prefixes served with the immutable cache profile. Matching is case-sensitive.</value>
+    /// <value>The request path prefixes served with the immutable cache profile. Matching is case-insensitive.</value>
     /// <remarks>Prefixes should represent versioned or content-addressed URLs whose content never changes.</remarks>
     public IList<string> ImmutablePathPrefixes { get; set; } = [];
 

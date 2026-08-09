@@ -115,6 +115,72 @@ public class ContentRootValidatorTest : Test
         Assert.False(ContentRootValidator.ExposesApplicationFiles(content.Path, application.Path));
     }
 
+    [Fact]
+    public void ExposesApplicationFiles_ShouldReturnTrue_WhenContentRootIsSymbolicLinkToApplicationDirectory()
+    {
+        using var application = new TempDirectory();
+        using var linkHost = new TempDirectory();
+        var contentRoot = Path.Combine(linkHost.Path, "content");
+        CreateDirectorySymbolicLinkOrSkip(contentRoot, application.Path);
+
+        try
+        {
+            Assert.True(ContentRootValidator.ExposesApplicationFiles(contentRoot, application.Path));
+
+            var probe = ContentRootValidator.Probe(contentRoot, application.Path);
+            Assert.Equal(Path.GetFullPath(application.Path), probe.ResolvedPath);
+        }
+        finally
+        {
+            Directory.Delete(contentRoot);
+        }
+    }
+
+    [Fact]
+    public void Validate_ShouldFail_WhenContentRootIsSymbolicLinkToApplicationParent()
+    {
+        using var applicationParent = new TempDirectory();
+        var applicationDirectory = Directory.CreateDirectory(Path.Combine(applicationParent.Path, "app")).FullName;
+        using var linkHost = new TempDirectory();
+        var contentRoot = Path.Combine(linkHost.Path, "content");
+        CreateDirectorySymbolicLinkOrSkip(contentRoot, applicationParent.Path);
+
+        try
+        {
+            var result = ContentRootValidator.Validate(contentRoot, applicationDirectory);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("would expose application files", result.ErrorMessage);
+        }
+        finally
+        {
+            Directory.Delete(contentRoot);
+        }
+    }
+
+    [Fact]
+    public void Validate_ShouldFail_WhenContentRootTraversesSymbolicLinkToApplicationParent()
+    {
+        using var applicationParent = new TempDirectory();
+        var applicationDirectory = Directory.CreateDirectory(Path.Combine(applicationParent.Path, "app")).FullName;
+        using var linkHost = new TempDirectory();
+        var linkedParent = Path.Combine(linkHost.Path, "parent");
+        var contentRoot = Path.Combine(linkedParent, "app");
+        CreateDirectorySymbolicLinkOrSkip(linkedParent, applicationParent.Path);
+
+        try
+        {
+            var result = ContentRootValidator.Validate(contentRoot, applicationDirectory);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("would expose application files", result.ErrorMessage);
+        }
+        finally
+        {
+            Directory.Delete(linkedParent);
+        }
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -208,5 +274,17 @@ public class ContentRootValidatorTest : Test
 
         Assert.False(result.Succeeded);
         Assert.Contains("would expose application files", result.ErrorMessage);
+    }
+
+    private static void CreateDirectorySymbolicLinkOrSkip(string linkPath, string targetPath)
+    {
+        try
+        {
+            Directory.CreateSymbolicLink(linkPath, targetPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            Assert.Skip($"Directory symbolic links are unavailable: {ex.Message}");
+        }
     }
 }

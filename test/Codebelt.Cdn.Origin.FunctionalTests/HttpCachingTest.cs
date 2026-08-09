@@ -50,6 +50,25 @@ public class HttpCachingTest : Test
     }
 
     [Fact]
+    public async Task Get_ShouldEmitImmutableCacheControl_WhenPathUsesDifferentCasingThanConfiguredPrefix()
+    {
+        await using var application = new CdnOriginTestApplication(TestOutput, new Dictionary<string, string?>
+        {
+            ["CdnOrigin:Cache:ImmutablePathPrefixes:0"] = "/assets/"
+        });
+
+        using var client = application.CreateClient();
+
+        using var response = await client.GetAsync("/ASSETS/app.4f2c.js");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("Cache-Control", out var values));
+        var cacheControl = string.Join(", ", values);
+        Assert.Contains("immutable", cacheControl);
+        Assert.Contains("max-age=31536000", cacheControl);
+    }
+
+    [Fact]
     public async Task Get_ShouldEmitEntityTagAndLastModified()
     {
         await using var application = new CdnOriginTestApplication(TestOutput);

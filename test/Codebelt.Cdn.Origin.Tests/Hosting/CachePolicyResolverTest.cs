@@ -132,6 +132,17 @@ public class CachePolicyResolverTest : Test
     }
 
     [Fact]
+    public void Resolve_ShouldReturnImmutable_WhenPathMatchesImmutablePrefixWithDifferentCasing()
+    {
+        var options = new CdnOriginOptions();
+        options.Cache.ImmutablePathPrefixes.Add("/assets/");
+
+        var resolver = new CachePolicyResolver(options);
+
+        Assert.Equal(CachePolicyResolver.BuildCacheControl(options.Cache.Immutable), resolver.Resolve("/ASSETS/app.4f2c.js"));
+    }
+
+    [Fact]
     public void Resolve_ShouldIgnoreWhitespacePrefixes()
     {
         var options = new CdnOriginOptions();

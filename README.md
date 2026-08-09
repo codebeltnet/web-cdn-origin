@@ -99,7 +99,7 @@ Rather than emitting one set of directives for every file, the provider supports
 - **Revalidate** — for mutable URLs. Default: `public, max-age=12h, s-maxage=7d, must-revalidate`.
 - **Immutable** — for versioned or content-addressed URLs. Default: `public, max-age=365d, immutable`.
 
-A request uses the **immutable** profile when its path starts with one of the configured `Cache:ImmutablePathPrefixes` (for example `/assets/`); otherwise it uses the **revalidate** profile.
+A request uses the **immutable** profile when its path starts with one of the configured `Cache:ImmutablePathPrefixes` (for example `/assets/`), matched case-insensitively; otherwise it uses the **revalidate** profile.
 
 Each profile exposes the relevant `Cache-Control` directives: `public`/`private`, `max-age`, `s-maxage`, `must-revalidate`, `no-cache`, `no-store`, `immutable`, `stale-while-revalidate`, `stale-if-error`, and `no-transform`. Contradictory combinations are rejected at startup, and `no-transform` is **not** emitted by default so a CDN may legitimately transform or optimize responses.
 
@@ -118,7 +118,7 @@ Configuration binds from the `CdnOrigin` section (via `appsettings.json`) and ca
 
 | Setting | Type | Default | Description |
 | --- | --- | --- | --- |
-| `CdnOrigin:Cache:ImmutablePathPrefixes` | string[] | *(empty)* | Request-path prefixes served with the immutable profile. |
+| `CdnOrigin:Cache:ImmutablePathPrefixes` | string[] | *(empty)* | Request-path prefixes served with the immutable profile, matched case-insensitively. |
 | `CdnOrigin:Cache:Revalidate` | profile | `public`, `12:00:00`, `7.00:00:00`, `must-revalidate` | Profile for mutable URLs. |
 | `CdnOrigin:Cache:Immutable` | profile | `public`, `365.00:00:00`, `immutable` | Profile for versioned/content-addressed URLs. |
 
@@ -294,7 +294,7 @@ Because the origin emits correct validators and cache directives, CloudFront rev
 - **Read-only by design** — there are no write, upload, or delete paths.
 - **Restrictive defaults** — unknown file types are rejected, directory browsing is disabled, and path traversal outside the content root is prevented.
 - **CORS safety** — a wildcard/public origin can never be combined with credentials; this is enforced at startup.
-- **No application-file exposure** — the content root is validated at startup to ensure it does not overlap the application directory.
+- **No application-file exposure** — the content root is validated at startup, resolving symbolic links and junctions before checking for overlap with the application directory.
 - **Hardened container** — non-root user, non-privileged port, read-only-root-filesystem friendly, minimal image, and no baked-in credentials or CDN configuration.
 - **Health is not cacheable** — health responses are `Cache-Control: no-store`.
 
