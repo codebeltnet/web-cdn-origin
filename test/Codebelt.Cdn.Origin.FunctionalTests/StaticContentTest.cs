@@ -131,7 +131,7 @@ public class StaticContentTest : Test
     }
 
     [Fact]
-    public async Task Get_ShouldRespectFilesystemCaseSemantics()
+    public async Task Get_ShouldServeCaseInsensitivePath_OnEveryOperatingSystem()
     {
         await using var application = new CdnOriginTestApplication(TestOutput);
         using var client = application.CreateClient();
@@ -141,14 +141,7 @@ public class StaticContentTest : Test
 
         Assert.Equal(HttpStatusCode.OK, exact.StatusCode);
 
-        if (OperatingSystem.IsLinux())
-        {
-            Assert.Equal(HttpStatusCode.NotFound, wrongCase.StatusCode);
-        }
-        else
-        {
-            Assert.Equal(HttpStatusCode.OK, wrongCase.StatusCode);
-        }
+        Assert.Equal(HttpStatusCode.OK, wrongCase.StatusCode);
     }
 
     [Theory]
