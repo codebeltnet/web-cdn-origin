@@ -353,7 +353,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download saved image tarball
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.IMAGE_ARTIFACT_NAME }}
           path: ${{ runner.temp }}/container-image
@@ -442,7 +442,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download saved image tarball
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.IMAGE_ARTIFACT_NAME }}
           path: ${{ runner.temp }}/container-image
@@ -551,7 +551,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download container SBOM
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.SBOM_ARTIFACT_NAME }}
           path: ${{ runner.temp }}/container-sbom
@@ -591,7 +591,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download container SBOM
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.SBOM_ARTIFACT_NAME }}
           path: ${{ runner.temp }}/container-sbom
