@@ -135,8 +135,9 @@ public class ContentRootValidatorTest : Test
         {
             Assert.True(ContentRootValidator.ExposesApplicationFiles(contentRoot, application.Path));
 
-            var probe = ContentRootValidator.Probe(contentRoot, application.Path);
-            Assert.Equal(Path.GetFullPath(application.Path), probe.ResolvedPath);
+            var targetProbe = ContentRootValidator.Probe(application.Path, application.Path);
+            var contentRootProbe = ContentRootValidator.Probe(contentRoot, application.Path);
+            Assert.Equal(targetProbe.ResolvedPath, contentRootProbe.ResolvedPath);
         }
         finally
         {
