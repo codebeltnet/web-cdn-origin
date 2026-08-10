@@ -13,6 +13,10 @@ on:
         type: boolean
         description: Publish the saved container image to the configured Staging registry after all gates pass.
         default: false
+      attest_image:
+        type: boolean
+        description: Publish GitHub provenance and SBOM attestations to the target registry after image publication.
+        default: true
       container_repository:
         type: string
         description: Fully qualified image repository without a tag.
@@ -39,6 +43,7 @@ jobs:
       run-mac-tests: ${{ steps.vars.outputs.run-mac-tests }}
       run-privileged-jobs: ${{ steps.vars.outputs.run-privileged-jobs }}
       publish-image: ${{ steps.vars.outputs.publish-image }}
+      attest-image: ${{ steps.vars.outputs.attest-image }}
       container-repository: ${{ steps.vars.outputs.container-repository }}
       container-registry: ${{ steps.vars.outputs.container-registry }}
       promote-dockerhub: ${{ steps.vars.outputs.promote-dockerhub }}
@@ -51,6 +56,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           RUN_MAC_INPUT: ${{ inputs.run_mac_tests }}
           PUBLISH_IMAGE_INPUT: ${{ inputs.publish_image }}
+          ATTEST_IMAGE_INPUT: ${{ inputs.attest_image }}
           PROMOTE_DOCKERHUB_INPUT: ${{ inputs.promote_dockerhub }}
           CONTAINER_REPOSITORY_INPUT: ${{ inputs.container_repository }}
           DOCKERHUB_REPOSITORY_INPUT: ${{ inputs.dockerhub_repository }}
@@ -70,6 +76,12 @@ jobs:
             echo "publish-image=true" >> "$GITHUB_OUTPUT"
           else
             echo "publish-image=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$ATTEST_IMAGE_INPUT" == "false" ]]; then
+            echo "attest-image=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "attest-image=true" >> "$GITHUB_OUTPUT"
           fi
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" && "$PROMOTE_DOCKERHUB_INPUT" == "true" ]]; then
@@ -433,7 +445,7 @@ jobs:
         run: docker logout "$REGISTRY"
 
   container_promote_dockerhub:
-    if: ${{ always() && needs.init.outputs.publish-image == 'true' && needs.init.outputs.promote-dockerhub == 'true' && github.event_name != 'pull_request' && needs.container_attest.result == 'success' }}
+    if: ${{ always() && needs.init.outputs.publish-image == 'true' && needs.init.outputs.promote-dockerhub == 'true' && github.event_name != 'pull_request' && (needs.init.outputs.attest-image != 'true' || needs.container_attest.result == 'success') }}
     name: promote-container-dockerhub
     needs: [init, container_build, container_publish, container_attest]
     runs-on: ubuntu-24.04
@@ -544,10 +556,11 @@ jobs:
         run: docker logout "$REGISTRY"
 
   container_attest_dockerhub:
-    if: ${{ always() && needs.init.outputs.publish-image == 'true' && needs.init.outputs.promote-dockerhub == 'true' && github.event_name != 'pull_request' && needs.container_promote_dockerhub.result == 'success' }}
+    if: ${{ always() && needs.init.outputs.attest-image == 'true' && needs.init.outputs.publish-image == 'true' && needs.init.outputs.promote-dockerhub == 'true' && github.event_name != 'pull_request' && needs.container_promote_dockerhub.result == 'success' }}
     name: attest-container-dockerhub
     needs: [init, container_build, container_promote_dockerhub]
     runs-on: ubuntu-24.04
+    environment: Production
     permissions:
       contents: read
       id-token: write
@@ -558,6 +571,7 @@ jobs:
       IMAGE_REPOSITORY: docker.io/${{ needs.init.outputs.dockerhub-repository }}
       IMAGE_DIGEST: ${{ needs.container_promote_dockerhub.outputs.image-digest }}
       SBOM_ARTIFACT_NAME: ${{ needs.container_build.outputs.sbom-artifact-name }}
+      REGISTRY: docker.io
     steps:
       - name: Check out local actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -569,6 +583,13 @@ jobs:
         with:
           name: ${{ env.SBOM_ARTIFACT_NAME }}
           path: ${{ runner.temp }}/container-sbom
+
+      - name: Log in to Docker Hub for attestation
+        uses: ./.github/actions/docker-login
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Attest Docker Hub container provenance
         uses: ./.github/actions/container-attest-provenance
@@ -583,11 +604,19 @@ jobs:
           subject-digest: ${{ env.IMAGE_DIGEST }}
           sbom-path: ${{ runner.temp }}/container-sbom/sbom.spdx.json
 
+      - name: Log out of Docker Hub after attestation
+        if: ${{ always() }}
+        shell: bash
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+        run: docker logout "$REGISTRY"
+
   container_attest:
-    if: ${{ always() && needs.init.outputs.publish-image == 'true' && github.event_name != 'pull_request' && needs.container_publish.result == 'success' }}
+    if: ${{ always() && needs.init.outputs.attest-image == 'true' && needs.init.outputs.publish-image == 'true' && github.event_name != 'pull_request' && needs.container_publish.result == 'success' }}
     name: attest-container
     needs: [init, build, container_build, container_publish]
     runs-on: ubuntu-24.04
+    environment: Staging
     permissions:
       contents: read
       id-token: write
@@ -598,6 +627,7 @@ jobs:
       IMAGE_REPOSITORY: ${{ needs.init.outputs.container-repository }}
       IMAGE_DIGEST: ${{ needs.container_publish.outputs.image-digest }}
       SBOM_ARTIFACT_NAME: ${{ needs.container_build.outputs.sbom-artifact-name }}
+      REGISTRY: ${{ needs.init.outputs.container-registry }}
     steps:
       - name: Check out local actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -609,6 +639,13 @@ jobs:
         with:
           name: ${{ env.SBOM_ARTIFACT_NAME }}
           path: ${{ runner.temp }}/container-sbom
+
+      - name: Log in to image registry for attestation
+        uses: ./.github/actions/docker-login
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Attest container provenance
         uses: ./.github/actions/container-attest-provenance
@@ -622,3 +659,10 @@ jobs:
           subject-name: ${{ env.IMAGE_REPOSITORY }}
           subject-digest: ${{ env.IMAGE_DIGEST }}
           sbom-path: ${{ runner.temp }}/container-sbom/sbom.spdx.json
+
+      - name: Log out of image registry after attestation
+        if: ${{ always() }}
+        shell: bash
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+        run: docker logout "$REGISTRY"
