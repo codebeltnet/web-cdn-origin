@@ -265,6 +265,8 @@ jobs:
     outputs:
       semver: ${{ steps.tag_semver.outputs.version }}
       trunkver: ${{ steps.tag_trunkver.outputs.trunkver }}
+      image-artifact-name: ${{ steps.artifact_names.outputs.image-artifact-name }}
+      sbom-artifact-name: ${{ steps.artifact_names.outputs.sbom-artifact-name }}
     permissions:
       contents: read
     env:
@@ -278,6 +280,18 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+
+      - id: artifact_names
+        name: Calculate artifact names
+        shell: bash
+        env:
+          IMAGE_ARTIFACT_NAME: ${{ env.IMAGE_ARTIFACT_NAME }}
+          SBOM_ARTIFACT_NAME: ${{ env.SBOM_ARTIFACT_NAME }}
+        run: |
+          set -euo pipefail
+
+          printf 'image-artifact-name=%s\n' "$IMAGE_ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          printf 'sbom-artifact-name=%s\n' "$SBOM_ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         uses: ./.github/actions/docker-build
@@ -344,7 +358,7 @@ jobs:
     env:
       SEMVER_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.container_build.outputs.semver }}
       TRUNKVER_IMAGE_REF: ${{ needs.init.outputs.container-repository }}:${{ needs.container_build.outputs.trunkver }}
-      IMAGE_ARTIFACT_NAME: container-image-${{ github.run_id }}-${{ github.run_attempt }}
+      IMAGE_ARTIFACT_NAME: ${{ needs.container_build.outputs.image-artifact-name }}
       REGISTRY: ${{ needs.init.outputs.container-registry }}
     steps:
       - name: Check out local actions
@@ -434,7 +448,7 @@ jobs:
       STAGING_IMAGE_DIGEST: ${{ needs.container_publish.outputs.image-digest }}
       DOCKERHUB_REPOSITORY: docker.io/${{ needs.init.outputs.dockerhub-repository }}
       DOCKERHUB_REGISTRY: docker.io
-      IMAGE_ARTIFACT_NAME: container-image-${{ github.run_id }}-${{ github.run_attempt }}
+      IMAGE_ARTIFACT_NAME: ${{ needs.container_build.outputs.image-artifact-name }}
     steps:
       - name: Check out local actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -543,7 +557,7 @@ jobs:
     env:
       IMAGE_REPOSITORY: docker.io/${{ needs.init.outputs.dockerhub-repository }}
       IMAGE_DIGEST: ${{ needs.container_promote_dockerhub.outputs.image-digest }}
-      SBOM_ARTIFACT_NAME: container-sbom-${{ github.run_id }}-${{ github.run_attempt }}
+      SBOM_ARTIFACT_NAME: ${{ needs.container_build.outputs.sbom-artifact-name }}
     steps:
       - name: Check out local actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -583,7 +597,7 @@ jobs:
     env:
       IMAGE_REPOSITORY: ${{ needs.init.outputs.container-repository }}
       IMAGE_DIGEST: ${{ needs.container_publish.outputs.image-digest }}
-      SBOM_ARTIFACT_NAME: container-sbom-${{ github.run_id }}-${{ github.run_attempt }}
+      SBOM_ARTIFACT_NAME: ${{ needs.container_build.outputs.sbom-artifact-name }}
     steps:
       - name: Check out local actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
