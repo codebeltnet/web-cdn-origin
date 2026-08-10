@@ -130,9 +130,16 @@ public static class ContentRootValidator
 
         string candidate = Path.Combine(ResolveFinalDirectoryPath(parent), directory.Name);
 
-        return Directory.Exists(candidate)
-            ? Directory.ResolveLinkTarget(candidate, returnFinalTarget: true)?.FullName ?? candidate
-            : candidate;
+        if (!Directory.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        FileSystemInfo? linkTarget = Directory.ResolveLinkTarget(candidate, returnFinalTarget: true);
+
+        return linkTarget is null
+            ? candidate
+            : ResolveFinalDirectoryPath(new DirectoryInfo(linkTarget.FullName));
     }
 
     private static string EnsureTrailingSeparator(string path)

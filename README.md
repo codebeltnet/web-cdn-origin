@@ -210,7 +210,7 @@ COPY ./cdnroot /cdnroot
 
 ## CI and container promotion
 
-Pull requests run the Debug/Release build and Linux/Windows test matrices, optionally including macOS. They also build the Dockerfile once on Linux/amd64, generate an SPDX JSON SBOM, save the image with `docker save`, and upload the tarball as an artifact. No registry credentials or push permissions are available to pull-request builds.
+Pull requests run the Debug/Release build and Linux, Windows, and macOS test matrices. They also build the Dockerfile once on Linux/amd64, generate an SPDX JSON SBOM, save the image with `docker save`, and upload the tarball as an artifact. No registry credentials or push permissions are available to pull-request builds. Manually dispatched runs keep macOS optional through `run_mac_tests` because of its additional cost and runtime.
 
 The saved image receives two tags:
 

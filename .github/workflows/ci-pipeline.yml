@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$RUN_MAC_INPUT" == "true" ]]; then
+          if [[ "$EVENT_NAME" == "pull_request" ]] || [[ "$EVENT_NAME" == "workflow_dispatch" && "$RUN_MAC_INPUT" == "true" ]]; then
             echo "run-mac-tests=true" >> "$GITHUB_OUTPUT"
           else
             echo "run-mac-tests=false" >> "$GITHUB_OUTPUT"

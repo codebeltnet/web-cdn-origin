@@ -48,6 +48,12 @@ This is a **major** release representing a deliberate modernization of the Stati
 - **`ServeUnknownFileTypes = true`.** Unknown file types are now rejected by default; add explicit MIME mappings through configuration to serve additional types,
 - Legacy `Startup` class and associated extension methods. Modern minimal hosting replaces them.
 
+### Fixed
+
+- Symbolic link resolution in `ContentRootValidator` now recursively follows intermediate symlinks instead of stopping at the first target, preventing traversal bypasses when symlinks chain through multiple levels,
+- CI workflow now runs macOS tests on pull request events (previously only on manual dispatch) for complete multi-OS coverage in validation gates,
+- Test coverage expanded to include chained symbolic link scenarios and root directory edge cases.
+
 ### Migration
 
 See the "Migration from 1.4.0 to 2.0.0" section of `README.md` for the full `1.x` → `2.0.0` configuration mapping and behavioural notes.
