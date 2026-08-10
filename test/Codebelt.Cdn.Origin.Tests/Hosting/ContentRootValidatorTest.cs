@@ -107,6 +107,14 @@ public class ContentRootValidatorTest : Test
     }
 
     [Fact]
+    public void ExposesApplicationFiles_ShouldReturnTrue_WhenPathsAreRootDirectories()
+    {
+        string root = Path.GetPathRoot(Path.GetTempPath())!;
+
+        Assert.True(ContentRootValidator.ExposesApplicationFiles(root, root));
+    }
+
+    [Fact]
     public void ExposesApplicationFiles_ShouldReturnFalse_WhenDirectoriesAreSeparate()
     {
         using var content = new TempDirectory();
@@ -133,6 +141,29 @@ public class ContentRootValidatorTest : Test
         finally
         {
             Directory.Delete(contentRoot);
+        }
+    }
+
+    [Fact]
+    public void ExposesApplicationFiles_ShouldReturnTrue_WhenSymbolicLinkTargetTraversesSymbolicLink()
+    {
+        using var applicationParent = new TempDirectory();
+        var applicationDirectory = Directory.CreateDirectory(Path.Combine(applicationParent.Path, "app")).FullName;
+        using var aliasHost = new TempDirectory();
+        var applicationParentAlias = Path.Combine(aliasHost.Path, "alias");
+        CreateDirectorySymbolicLinkOrSkip(applicationParentAlias, applicationParent.Path);
+        using var linkHost = new TempDirectory();
+        var contentRoot = Path.Combine(linkHost.Path, "content");
+        CreateDirectorySymbolicLinkOrSkip(contentRoot, Path.Combine(applicationParentAlias, "app"));
+
+        try
+        {
+            Assert.True(ContentRootValidator.ExposesApplicationFiles(contentRoot, applicationDirectory));
+        }
+        finally
+        {
+            Directory.Delete(contentRoot);
+            Directory.Delete(applicationParentAlias);
         }
     }
 
