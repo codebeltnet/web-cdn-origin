@@ -149,7 +149,7 @@ jobs:
       matrix:
         configuration: [Debug, Release]
         arch: [X64, ARM64]
-    uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@a645b9332f981573961895075ff66d21e625185b # v3
+    uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@adac0ea4ae544ca677c5a7581fd648510cd60e17 # v3
     with:
       projects: test/**/*.csproj
       runs-on: ${{ matrix.arch == 'ARM64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
@@ -167,7 +167,7 @@ jobs:
       matrix:
         configuration: [Debug, Release]
         arch: [X64, ARM64]
-    uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@a645b9332f981573961895075ff66d21e625185b # v3
+    uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@adac0ea4ae544ca677c5a7581fd648510cd60e17 # v3
     with:
       projects: test/**/*.csproj
       runs-on: ${{ matrix.arch == 'ARM64' && 'windows-11-arm' || 'windows-2025' }}
@@ -186,7 +186,7 @@ jobs:
       matrix:
         arch: [X64, ARM64]
         configuration: [Debug, Release]
-    uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@a645b9332f981573961895075ff66d21e625185b # v3
+    uses: codebeltnet/jobs-dotnet-test/.github/workflows/default.yml@adac0ea4ae544ca677c5a7581fd648510cd60e17 # v3
     with:
       projects: test/**/*.csproj
       runs-on: ${{ matrix.arch == 'ARM64' && 'macos-26' || 'macos-26-intel' }}
