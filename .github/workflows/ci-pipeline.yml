@@ -246,7 +246,7 @@ jobs:
     if: ${{ always() && needs.init.outputs.run-privileged-jobs == 'true' && needs.build.result == 'success' && needs.test_qualitygate.result == 'success' }}
     name: call-sonarcloud
     needs: [init, build, test_qualitygate]
-    uses: codebeltnet/jobs-sonarcloud/.github/workflows/default.yml@b62fadec0fae16ae2a35a6c2238555f6f965cc5e # v3
+    uses: codebeltnet/jobs-sonarcloud/.github/workflows/default.yml@cbdcae93a5645bb18a069e9677387289b742e7b5 # v3
     with:
       organization: geekle
       projectKey: web-cdn-origin
