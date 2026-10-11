@@ -257,7 +257,7 @@ jobs:
     if: ${{ always() && needs.init.outputs.run-privileged-jobs == 'true' && needs.build.result == 'success' && needs.test_qualitygate.result == 'success' }}
     name: call-codecov
     needs: [init, build, test_qualitygate]
-    uses: codebeltnet/jobs-codecov/.github/workflows/default.yml@a9957d94ecee89937cbd41a004c2246cf5f9c8c1 # v1
+    uses: codebeltnet/jobs-codecov/.github/workflows/default.yml@eb8c1bfdaf76b8e37b4fbec9f6e16347c2af8c89 # v1
     with:
       repository: codebeltnet/web-cdn-origin
     secrets: inherit
