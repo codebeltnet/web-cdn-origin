@@ -133,7 +133,7 @@ jobs:
       matrix:
         arch: [X64, ARM64]
         configuration: [Debug, Release]
-    uses: codebeltnet/jobs-dotnet-build/.github/workflows/default.yml@917611a9989486b09f5a7ae160dc78014b541f9c # v3
+    uses: codebeltnet/jobs-dotnet-build/.github/workflows/default.yml@e98033f2e715aba5e6dcd6f4cb7783504e5fdc38 # v3
     with:
       projects: src/**/*.csproj
       configuration: ${{ matrix.configuration }}
